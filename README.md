@@ -1,1 +1,1 @@
-implemented global variable
+upgrading to loops and bools statements

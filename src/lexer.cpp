@@ -12,6 +12,7 @@ namespace {
 const std::unordered_map<std::string_view, TokenType> kKeywords = {
     {"print", TokenType::Print},
     {"let", TokenType::Let},
+    {"nil", TokenType::Nil},
     {"true", TokenType::True},
     {"false", TokenType::False},
     {"if", TokenType::If},
@@ -130,7 +131,15 @@ void Lexer::number() {
     }
 
     const auto lexeme = source_.substr(start_, current_ - start_);
-    addToken(TokenType::Number, std::stod(lexeme));
+    try {
+        addToken(TokenType::Number, std::stod(lexeme));
+    } catch (const std::invalid_argument&) {
+        throw std::runtime_error(
+            "Invalid numeric literal '" + lexeme + "' on line " + std::to_string(line_) + ".");
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error(
+            "Numeric literal '" + lexeme + "' is out of range on line " + std::to_string(line_) + ".");
+    }
 }
 
 void Lexer::identifier() {
@@ -161,4 +170,3 @@ bool Lexer::isAlphaNumeric(char c) {
 }
 
 }  // namespace cvm
-

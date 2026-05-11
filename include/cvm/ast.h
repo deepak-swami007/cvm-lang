@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "cvm/token.h"
+#include "cvm/value.h"
 
 namespace cvm {
 
@@ -17,7 +18,7 @@ using ExprPtr = std::unique_ptr<Expr>;
 
 class LiteralExpr {
   public:
-    double value;
+    Value value;
 };
 
 class GroupingExpr {
@@ -78,9 +79,27 @@ class VarDeclStmt {
     ExprPtr initializer;
 };
 
+class BlockStmt {
+  public:
+    std::vector<StmtPtr> statements;
+};
+
+class IfStmt {
+  public:
+    ExprPtr condition;
+    StmtPtr thenBranch;
+    StmtPtr elseBranch;
+};
+
+class WhileStmt {
+  public:
+    ExprPtr condition;
+    StmtPtr body;
+};
+
 class Stmt {
   public:
-    using Variant = std::variant<PrintStmt, ExpressionStmt, VarDeclStmt>;
+    using Variant = std::variant<PrintStmt, ExpressionStmt, VarDeclStmt, BlockStmt, IfStmt, WhileStmt>;
 
     template <typename T>
     explicit Stmt(T node) : value(std::move(node)) {}
@@ -98,9 +117,7 @@ inline std::string exprToString(const Expr& expr) {
             using T = std::decay_t<decltype(node)>;
 
             if constexpr (std::is_same_v<T, LiteralExpr>) {
-                std::ostringstream out;
-                out << node.value;
-                return out.str();
+                return formatValue(node.value);
             } else if constexpr (std::is_same_v<T, GroupingExpr>) {
                 return parenthesize("group", {node.expression.get()});
             } else if constexpr (std::is_same_v<T, UnaryExpr>) {
@@ -141,6 +158,23 @@ inline std::string toString(const Stmt& stmt) {
                 return "(print " + toString(*node.expression) + ")";
             } else if constexpr (std::is_same_v<T, VarDeclStmt>) {
                 return "(let " + node.name.lexeme + " " + toString(*node.initializer) + ")";
+            } else if constexpr (std::is_same_v<T, BlockStmt>) {
+                std::string result = "(block";
+                for (const auto& statement : node.statements) {
+                    result += " " + toString(*statement);
+                }
+                result += ")";
+                return result;
+            } else if constexpr (std::is_same_v<T, IfStmt>) {
+                std::string result =
+                    "(if " + toString(*node.condition) + " " + toString(*node.thenBranch);
+                if (node.elseBranch) {
+                    result += " " + toString(*node.elseBranch);
+                }
+                result += ")";
+                return result;
+            } else if constexpr (std::is_same_v<T, WhileStmt>) {
+                return "(while " + toString(*node.condition) + " " + toString(*node.body) + ")";
             } else {
                 return "(expr " + toString(*node.expression) + ")";
             }
