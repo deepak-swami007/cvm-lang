@@ -1,5 +1,6 @@
 #include "cvm/vm.h"
 
+#include <iostream>
 #include <stdexcept>
 
 namespace cvm {
@@ -164,6 +165,22 @@ void VirtualMachine::run(const Chunk& chunk, std::ostream& out, const VMOptions&
             case OpCode::Print:
                 out << formatValue(pop()) << '\n';
                 break;
+            case OpCode::Input: {
+                const std::string& name = readGlobalName(chunk, ip);
+                const auto it = globals_.find(name);
+                if (it == globals_.end()) {
+                    throw std::runtime_error("Undefined variable '" + name + "' in input statement.");
+                }
+                double inputValue = 0;
+                std::cin >> inputValue;
+                if (std::cin.fail()) {
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    throw std::runtime_error("Invalid input: expected a number for variable '" + name + "'.");
+                }
+                it->second = Value{inputValue};
+                break;
+            }
             case OpCode::Pop:
                 pop();
                 break;

@@ -34,6 +34,7 @@ enum class OpCode : std::uint8_t {
     JumpIfFalse,
     Loop,
     Print,
+    Input,
     Pop,
     Halt,
 };
@@ -100,6 +101,7 @@ inline std::string_view opcodeName(OpCode op) {
         case OpCode::JumpIfFalse: return "OP_JUMP_IF_FALSE";
         case OpCode::Loop: return "OP_LOOP";
         case OpCode::Print: return "OP_PRINT";
+        case OpCode::Input: return "OP_INPUT";
         case OpCode::Pop: return "OP_POP";
         case OpCode::Halt: return "OP_HALT";
     }
@@ -135,7 +137,8 @@ inline std::string disassemble(const Chunk& chunk) {
             }
             case OpCode::DefineGlobal:
             case OpCode::GetGlobal:
-            case OpCode::SetGlobal: {
+            case OpCode::SetGlobal:
+            case OpCode::Input: {
                 if (offset + 1 >= chunk.code.size()) {
                     out << " <missing operand>";
                     offset = chunk.code.size();

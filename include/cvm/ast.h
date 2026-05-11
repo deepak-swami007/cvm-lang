@@ -97,9 +97,14 @@ class WhileStmt {
     StmtPtr body;
 };
 
+class InputStmt {
+  public:
+    Token name;
+};
+
 class Stmt {
   public:
-    using Variant = std::variant<PrintStmt, ExpressionStmt, VarDeclStmt, BlockStmt, IfStmt, WhileStmt>;
+    using Variant = std::variant<PrintStmt, ExpressionStmt, VarDeclStmt, BlockStmt, IfStmt, WhileStmt, InputStmt>;
 
     template <typename T>
     explicit Stmt(T node) : value(std::move(node)) {}
@@ -175,6 +180,8 @@ inline std::string toString(const Stmt& stmt) {
                 return result;
             } else if constexpr (std::is_same_v<T, WhileStmt>) {
                 return "(while " + toString(*node.condition) + " " + toString(*node.body) + ")";
+            } else if constexpr (std::is_same_v<T, InputStmt>) {
+                return "(input " + node.name.lexeme + ")";
             } else {
                 return "(expr " + toString(*node.expression) + ")";
             }
