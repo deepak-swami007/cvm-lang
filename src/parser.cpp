@@ -24,8 +24,12 @@ StmtPtr Parser::declaration() {
 
 StmtPtr Parser::variableDeclaration() {
     const Token& name = consume(TokenType::Identifier, "Expected variable name after 'let'.");
-    consume(TokenType::Equal, "Expected '=' after variable name.");
-    ExprPtr initializer = expression();
+    ExprPtr initializer;
+    if (match({TokenType::Equal})) {
+        initializer = expression();
+    } else {
+        initializer = std::make_unique<Expr>(LiteralExpr{Value{std::monostate{}}});
+    }
     consume(TokenType::Semicolon, "Expected ';' after variable declaration.");
     return std::make_unique<Stmt>(VarDeclStmt{name, std::move(initializer)});
 }
@@ -34,7 +38,48 @@ StmtPtr Parser::statement() {
     if (match({TokenType::Print})) {
         return printStatement();
     }
+    if (match({TokenType::If})) {
+        return ifStatement();
+    }
+    if (match({TokenType::While})) {
+        return whileStatement();
+    }
+    if (match({TokenType::LeftBrace})) {
+        return blockStatement();
+    }
     return expressionStatement();
+}
+
+StmtPtr Parser::blockStatement() {
+    std::vector<StmtPtr> statements;
+    while (!check(TokenType::RightBrace) && !isAtEnd()) {
+        statements.push_back(declaration());
+    }
+
+    consume(TokenType::RightBrace, "Expected '}' after block.");
+    return std::make_unique<Stmt>(BlockStmt{std::move(statements)});
+}
+
+StmtPtr Parser::ifStatement() {
+    consume(TokenType::LeftParen, "Expected '(' after 'if'.");
+    ExprPtr condition = expression();
+    consume(TokenType::RightParen, "Expected ')' after if condition.");
+
+    StmtPtr thenBranch = declaration();
+    StmtPtr elseBranch = nullptr;
+    if (match({TokenType::Else})) {
+        elseBranch = declaration();
+    }
+
+    return std::make_unique<Stmt>(IfStmt{std::move(condition), std::move(thenBranch), std::move(elseBranch)});
+}
+
+StmtPtr Parser::whileStatement() {
+    consume(TokenType::LeftParen, "Expected '(' after 'while'.");
+    ExprPtr condition = expression();
+    consume(TokenType::RightParen, "Expected ')' after while condition.");
+    StmtPtr body = declaration();
+    return std::make_unique<Stmt>(WhileStmt{std::move(condition), std::move(body)});
 }
 
 StmtPtr Parser::printStatement() {
@@ -119,7 +164,7 @@ ExprPtr Parser::factor() {
 }
 
 ExprPtr Parser::unary() {
-    if (match({TokenType::Minus})) {
+    if (match({TokenType::Bang, TokenType::Minus})) {
         Token op = previous();
         ExprPtr right = unary();
         return std::make_unique<Expr>(UnaryExpr{std::move(op), std::move(right)});
@@ -130,7 +175,19 @@ ExprPtr Parser::unary() {
 
 ExprPtr Parser::primary() {
     if (match({TokenType::Number})) {
-        return std::make_unique<Expr>(LiteralExpr{*previous().number});
+        return std::make_unique<Expr>(LiteralExpr{Value{*previous().number}});
+    }
+
+    if (match({TokenType::Nil})) {
+        return std::make_unique<Expr>(LiteralExpr{Value{std::monostate{}}});
+    }
+
+    if (match({TokenType::True})) {
+        return std::make_unique<Expr>(LiteralExpr{Value{true}});
+    }
+
+    if (match({TokenType::False})) {
+        return std::make_unique<Expr>(LiteralExpr{Value{false}});
     }
 
     if (match({TokenType::Identifier})) {
@@ -143,7 +200,7 @@ ExprPtr Parser::primary() {
         return std::make_unique<Expr>(GroupingExpr{std::move(expr)});
     }
 
-    error(peek(), "Expected a number, identifier, or parenthesized expression.");
+    error(peek(), "Expected a literal, identifier, or parenthesized expression.");
 }
 
 bool Parser::match(std::initializer_list<TokenType> types) {

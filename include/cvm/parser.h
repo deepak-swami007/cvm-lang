@@ -19,6 +19,9 @@ class Parser {
     StmtPtr declaration();
     StmtPtr variableDeclaration();
     StmtPtr statement();
+    StmtPtr blockStatement();
+    StmtPtr ifStatement();
+    StmtPtr whileStatement();
     StmtPtr printStatement();
     StmtPtr expressionStatement();
 

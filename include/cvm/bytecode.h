@@ -7,20 +7,32 @@
 #include <string_view>
 #include <vector>
 
+#include "cvm/value.h"
+
 namespace cvm {
 
-using Value = double;
-
 enum class OpCode : std::uint8_t {
+    Nil,
+    True,
+    False,
     Constant,
     DefineGlobal,
     GetGlobal,
     SetGlobal,
+    Equal,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+    Not,
     Add,
     Subtract,
     Multiply,
     Divide,
     Negate,
+    Jump,
+    JumpIfFalse,
+    Loop,
     Print,
     Pop,
     Halt,
@@ -66,15 +78,27 @@ class Chunk {
 
 inline std::string_view opcodeName(OpCode op) {
     switch (op) {
+        case OpCode::Nil: return "OP_NIL";
+        case OpCode::True: return "OP_TRUE";
+        case OpCode::False: return "OP_FALSE";
         case OpCode::Constant: return "OP_CONSTANT";
         case OpCode::DefineGlobal: return "OP_DEFINE_GLOBAL";
         case OpCode::GetGlobal: return "OP_GET_GLOBAL";
         case OpCode::SetGlobal: return "OP_SET_GLOBAL";
+        case OpCode::Equal: return "OP_EQUAL";
+        case OpCode::Greater: return "OP_GREATER";
+        case OpCode::GreaterEqual: return "OP_GREATER_EQUAL";
+        case OpCode::Less: return "OP_LESS";
+        case OpCode::LessEqual: return "OP_LESS_EQUAL";
+        case OpCode::Not: return "OP_NOT";
         case OpCode::Add: return "OP_ADD";
         case OpCode::Subtract: return "OP_SUBTRACT";
         case OpCode::Multiply: return "OP_MULTIPLY";
         case OpCode::Divide: return "OP_DIVIDE";
         case OpCode::Negate: return "OP_NEGATE";
+        case OpCode::Jump: return "OP_JUMP";
+        case OpCode::JumpIfFalse: return "OP_JUMP_IF_FALSE";
+        case OpCode::Loop: return "OP_LOOP";
         case OpCode::Print: return "OP_PRINT";
         case OpCode::Pop: return "OP_POP";
         case OpCode::Halt: return "OP_HALT";
@@ -102,7 +126,7 @@ inline std::string disassemble(const Chunk& chunk) {
                 const std::uint8_t constantIndex = chunk.code[offset + 1];
                 out << ' ' << static_cast<int>(constantIndex);
                 if (constantIndex < chunk.constants.size()) {
-                    out << " (" << chunk.constants[constantIndex] << ")";
+                    out << " (" << formatValue(chunk.constants[constantIndex]) << ")";
                 } else {
                     out << " (<invalid constant index>)";
                 }
@@ -126,6 +150,23 @@ inline std::string disassemble(const Chunk& chunk) {
                     out << " (<invalid name index>)";
                 }
                 offset += 2;
+                break;
+            }
+            case OpCode::Jump:
+            case OpCode::JumpIfFalse:
+            case OpCode::Loop: {
+                if (offset + 2 >= chunk.code.size()) {
+                    out << " <missing operand>";
+                    offset = chunk.code.size();
+                    break;
+                }
+
+                const std::uint16_t jumpOffset =
+                    static_cast<std::uint16_t>((chunk.code[offset + 1] << 8) | chunk.code[offset + 2]);
+                const std::size_t target =
+                    op == OpCode::Loop ? offset + 3 - jumpOffset : offset + 3 + jumpOffset;
+                out << ' ' << jumpOffset << " -> " << target;
+                offset += 3;
                 break;
             }
             default:
