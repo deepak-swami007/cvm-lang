@@ -23,6 +23,7 @@ class Parser {
     StmtPtr ifStatement();
     StmtPtr whileStatement();
     StmtPtr printStatement();
+    StmtPtr inputStatement();
     StmtPtr expressionStatement();
 
     ExprPtr expression();

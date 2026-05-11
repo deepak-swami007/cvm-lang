@@ -55,6 +55,7 @@ void Compiler::collectGlobalDeclarations(const Stmt &stmt) {
         } else if constexpr (std::is_same_v<T, WhileStmt>) {
           collectGlobalDeclarations(*node.body);
         }
+        // InputStmt does not declare new globals, nothing to collect.
       },
       stmt.value);
 }
@@ -98,6 +99,10 @@ void Compiler::emitStatement(const Stmt &stmt) {
           emitLoop(loopStart);
           patchJump(exitJump);
           chunk_.writeOp(OpCode::Pop);
+        } else if constexpr (std::is_same_v<T, InputStmt>) {
+          ensureDeclaredGlobal(node.name);
+          chunk_.writeOp(OpCode::Input);
+          chunk_.writeByte(chunk_.addName(node.name.lexeme));
         } else {
           emitExpression(*node.expression);
           chunk_.writeOp(OpCode::Pop);

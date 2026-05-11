@@ -38,6 +38,9 @@ StmtPtr Parser::statement() {
     if (match({TokenType::Print})) {
         return printStatement();
     }
+    if (match({TokenType::Input})) {
+        return inputStatement();
+    }
     if (match({TokenType::If})) {
         return ifStatement();
     }
@@ -86,6 +89,12 @@ StmtPtr Parser::printStatement() {
     ExprPtr value = expression();
     consume(TokenType::Semicolon, "Expected ';' after value.");
     return std::make_unique<Stmt>(PrintStmt{std::move(value)});
+}
+
+StmtPtr Parser::inputStatement() {
+    const Token& name = consume(TokenType::Identifier, "Expected variable name after 'input'.");
+    consume(TokenType::Semicolon, "Expected ';' after variable name.");
+    return std::make_unique<Stmt>(InputStmt{name});
 }
 
 StmtPtr Parser::expressionStatement() {

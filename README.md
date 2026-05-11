@@ -1,1 +1,1 @@
-upgrading to loops and bools statements
+adding more funcationality and trying to fix errors

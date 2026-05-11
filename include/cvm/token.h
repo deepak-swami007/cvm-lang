@@ -29,6 +29,7 @@ enum class TokenType {
     Identifier,
     Number,
     Print,
+    Input,
     Let,
     Nil,
     True,
@@ -71,6 +72,7 @@ inline std::string_view tokenTypeName(TokenType type) {
         case TokenType::Identifier: return "Identifier";
         case TokenType::Number: return "Number";
         case TokenType::Print: return "Print";
+        case TokenType::Input: return "Input";
         case TokenType::Let: return "Let";
         case TokenType::Nil: return "Nil";
         case TokenType::True: return "True";

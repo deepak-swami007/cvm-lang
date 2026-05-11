@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -97,33 +98,69 @@ int main(int argc, char** argv) {
 
         const std::string source = readFile(sourcePath);
 
-        std::cout << "=== File ===\n" << sourcePath << "\n\n";
-        std::cout << "=== Source ===\n" << source << "\n\n";
+        // === File ===
+        // std::cout << "=== File ===\n" << sourcePath << "\n\n";
+
+        // === Source ===
+        // std::cout << "=== Source ===\n" << source << "\n\n";
 
         cvm::Lexer lexer(source);
         std::vector<cvm::Token> tokens = lexer.scanTokens();
 
-        std::cout << "=== Tokens ===\n";
-        for (const auto& token : tokens) {
-            std::cout << cvm::formatToken(token) << '\n';
-        }
-        std::cout << '\n';
+        // === Tokens ===
+        // std::cout << "=== Tokens ===\n";
+        // for (const auto& token : tokens) {
+        //     std::cout << cvm::formatToken(token) << '\n';
+        // }
+        // std::cout << '\n';
 
         cvm::Parser parser(tokens);
         std::vector<cvm::StmtPtr> program = parser.parse();
 
-        std::cout << "=== AST ===\n" << cvm::toString(program) << "\n\n";
+        // === AST ===
+        // std::cout << "=== AST ===\n" << cvm::toString(program) << "\n\n";
 
         cvm::Compiler compiler;
         cvm::Chunk chunk = compiler.compile(program);
 
-        std::cout << "=== Bytecode ===\n" << cvm::disassemble(chunk) << "\n\n";
+        // === Bytecode ===
+        // std::cout << "=== Bytecode ===\n" << cvm::disassemble(chunk) << "\n\n";
 
         std::cout << "=== VM Output ===\n";
         cvm::VirtualMachine vm;
         vm.run(chunk, std::cout, vmOptions);
     } catch (const std::exception& error) {
-        std::cerr << "error: " << error.what() << '\n';
+        std::string msg = error.what();
+
+        // Try to extract line number from error message
+        std::regex lineRegex("line (\\d+)");
+        std::smatch match;
+        std::string lineInfo;
+        if (std::regex_search(msg, match, lineRegex)) {
+            lineInfo = "[Line " + match[1].str() + "] ";
+        }
+
+        // Determine error type from context
+        std::string errorType = "RuntimeError";
+        if (msg.find("Parse error") != std::string::npos) {
+            errorType = "SyntaxError";
+        } else if (msg.find("Unexpected character") != std::string::npos) {
+            errorType = "LexerError";
+        } else if (msg.find("Undefined variable") != std::string::npos) {
+            errorType = "NameError";
+        } else if (msg.find("Division by zero") != std::string::npos) {
+            errorType = "MathError";
+        } else if (msg.find("already declared") != std::string::npos || msg.find("already defined") != std::string::npos) {
+            errorType = "DeclarationError";
+        } else if (msg.find("Expected number") != std::string::npos || msg.find("Expected bool") != std::string::npos) {
+            errorType = "TypeError";
+        } else if (msg.find("stack") != std::string::npos) {
+            errorType = "StackError";
+        } else if (msg.find("Invalid input") != std::string::npos) {
+            errorType = "InputError";
+        }
+
+        std::cerr << lineInfo << errorType << ": " << msg << '\n';
         return 1;
     }
 
