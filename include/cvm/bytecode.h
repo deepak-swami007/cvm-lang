@@ -29,12 +29,19 @@ enum class OpCode : std::uint8_t {
     Subtract,
     Multiply,
     Divide,
+    Modulo,
+    Power,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseNot,
     Negate,
     Jump,
     JumpIfFalse,
     Loop,
     Print,
     Input,
+    CastToInt,
+    CastToDouble,
     Pop,
     Halt,
 };
@@ -96,12 +103,19 @@ inline std::string_view opcodeName(OpCode op) {
         case OpCode::Subtract: return "OP_SUBTRACT";
         case OpCode::Multiply: return "OP_MULTIPLY";
         case OpCode::Divide: return "OP_DIVIDE";
+        case OpCode::Modulo: return "OP_MODULO";
+        case OpCode::Power: return "OP_POWER";
+        case OpCode::BitwiseAnd: return "OP_BITWISE_AND";
+        case OpCode::BitwiseOr: return "OP_BITWISE_OR";
+        case OpCode::BitwiseNot: return "OP_BITWISE_NOT";
         case OpCode::Negate: return "OP_NEGATE";
         case OpCode::Jump: return "OP_JUMP";
         case OpCode::JumpIfFalse: return "OP_JUMP_IF_FALSE";
         case OpCode::Loop: return "OP_LOOP";
         case OpCode::Print: return "OP_PRINT";
         case OpCode::Input: return "OP_INPUT";
+        case OpCode::CastToInt: return "OP_CAST_TO_INT";
+        case OpCode::CastToDouble: return "OP_CAST_TO_DOUBLE";
         case OpCode::Pop: return "OP_POP";
         case OpCode::Halt: return "OP_HALT";
     }

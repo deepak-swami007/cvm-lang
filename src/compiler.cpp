@@ -70,6 +70,12 @@ void Compiler::emitStatement(const Stmt &stmt) {
           chunk_.writeOp(OpCode::Print);
         } else if constexpr (std::is_same_v<T, VarDeclStmt>) {
           emitExpression(*node.initializer);
+          // Emit type cast if a specific type was declared
+          if (node.declType == DeclType::Int || node.declType == DeclType::Long) {
+            chunk_.writeOp(OpCode::CastToInt);
+          } else if (node.declType == DeclType::Double || node.declType == DeclType::Float) {
+            chunk_.writeOp(OpCode::CastToDouble);
+          }
           chunk_.writeOp(OpCode::SetGlobal);
           chunk_.writeByte(chunk_.addName(node.name.lexeme));
           chunk_.writeOp(OpCode::Pop);
@@ -136,6 +142,10 @@ void Compiler::emitExpression(const Expr &expr) {
             chunk_.writeOp(OpCode::Not);
             return;
           }
+          if (node.op.type == TokenType::Tilde) {
+            chunk_.writeOp(OpCode::BitwiseNot);
+            return;
+          }
           throw std::runtime_error("Unsupported unary operator '" +
                                    node.op.lexeme + "'.");
         } else if constexpr (std::is_same_v<T, VariableExpr>) {
@@ -182,6 +192,18 @@ void Compiler::emitExpression(const Expr &expr) {
             return;
           case TokenType::Slash:
             chunk_.writeOp(OpCode::Divide);
+            return;
+          case TokenType::Percent:
+            chunk_.writeOp(OpCode::Modulo);
+            return;
+          case TokenType::Caret:
+            chunk_.writeOp(OpCode::Power);
+            return;
+          case TokenType::Ampersand:
+            chunk_.writeOp(OpCode::BitwiseAnd);
+            return;
+          case TokenType::Pipe:
+            chunk_.writeOp(OpCode::BitwiseOr);
             return;
           default:
             throw std::runtime_error("Unsupported binary operator '" +

@@ -23,7 +23,6 @@ class VirtualMachine {
     std::uint16_t readShort(const Chunk& chunk, std::size_t& ip, const char* context) const;
     Value readConstant(const Chunk& chunk, std::size_t& ip) const;
     const std::string& readGlobalName(const Chunk& chunk, std::size_t& ip) const;
-    const double& expectNumber(const Value& value, const char* context) const;
     bool expectBoolean(const Value& value, const char* context) const;
     void push(Value value);
     Value pop();

@@ -17,13 +17,27 @@ std::vector<StmtPtr> Parser::parse() {
 
 StmtPtr Parser::declaration() {
     if (match({TokenType::Let})) {
-        return variableDeclaration();
+        return variableDeclaration(DeclType::Auto);
+    }
+    if (match({TokenType::Int})) {
+        return variableDeclaration(DeclType::Int);
+    }
+    if (match({TokenType::Long})) {
+        // Support "long long" as two consecutive keywords
+        match({TokenType::Long});
+        return variableDeclaration(DeclType::Long);
+    }
+    if (match({TokenType::Double})) {
+        return variableDeclaration(DeclType::Double);
+    }
+    if (match({TokenType::Float})) {
+        return variableDeclaration(DeclType::Float);
     }
     return statement();
 }
 
-StmtPtr Parser::variableDeclaration() {
-    const Token& name = consume(TokenType::Identifier, "Expected variable name after 'let'.");
+StmtPtr Parser::variableDeclaration(DeclType declType) {
+    const Token& name = consume(TokenType::Identifier, "Expected variable name after type/let.");
     ExprPtr initializer;
     if (match({TokenType::Equal})) {
         initializer = expression();
@@ -31,7 +45,12 @@ StmtPtr Parser::variableDeclaration() {
         initializer = std::make_unique<Expr>(LiteralExpr{Value{std::monostate{}}});
     }
     consume(TokenType::Semicolon, "Expected ';' after variable declaration.");
-    return std::make_unique<Stmt>(VarDeclStmt{name, std::move(initializer)});
+
+    VarDeclStmt decl;
+    decl.name = name;
+    decl.initializer = std::move(initializer);
+    decl.declType = declType;
+    return std::make_unique<Stmt>(std::move(decl));
 }
 
 StmtPtr Parser::statement() {
@@ -137,9 +156,33 @@ ExprPtr Parser::equality() {
 }
 
 ExprPtr Parser::comparison() {
-    ExprPtr expr = term();
+    ExprPtr expr = bitwiseOr();
 
     while (match({TokenType::Greater, TokenType::GreaterEqual, TokenType::Less, TokenType::LessEqual})) {
+        Token op = previous();
+        ExprPtr right = bitwiseOr();
+        expr = std::make_unique<Expr>(BinaryExpr{std::move(expr), std::move(op), std::move(right)});
+    }
+
+    return expr;
+}
+
+ExprPtr Parser::bitwiseOr() {
+    ExprPtr expr = bitwiseAnd();
+
+    while (match({TokenType::Pipe})) {
+        Token op = previous();
+        ExprPtr right = bitwiseAnd();
+        expr = std::make_unique<Expr>(BinaryExpr{std::move(expr), std::move(op), std::move(right)});
+    }
+
+    return expr;
+}
+
+ExprPtr Parser::bitwiseAnd() {
+    ExprPtr expr = term();
+
+    while (match({TokenType::Ampersand})) {
         Token op = previous();
         ExprPtr right = term();
         expr = std::make_unique<Expr>(BinaryExpr{std::move(expr), std::move(op), std::move(right)});
@@ -161,11 +204,24 @@ ExprPtr Parser::term() {
 }
 
 ExprPtr Parser::factor() {
+    ExprPtr expr = power();
+
+    while (match({TokenType::Star, TokenType::Slash, TokenType::Percent})) {
+        Token op = previous();
+        ExprPtr right = power();
+        expr = std::make_unique<Expr>(BinaryExpr{std::move(expr), std::move(op), std::move(right)});
+    }
+
+    return expr;
+}
+
+ExprPtr Parser::power() {
     ExprPtr expr = unary();
 
-    while (match({TokenType::Star, TokenType::Slash})) {
+    // Right-associative: 2^3^2 = 2^(3^2)
+    if (match({TokenType::Caret})) {
         Token op = previous();
-        ExprPtr right = unary();
+        ExprPtr right = power();
         expr = std::make_unique<Expr>(BinaryExpr{std::move(expr), std::move(op), std::move(right)});
     }
 
@@ -173,7 +229,7 @@ ExprPtr Parser::factor() {
 }
 
 ExprPtr Parser::unary() {
-    if (match({TokenType::Bang, TokenType::Minus})) {
+    if (match({TokenType::Bang, TokenType::Minus, TokenType::Tilde})) {
         Token op = previous();
         ExprPtr right = unary();
         return std::make_unique<Expr>(UnaryExpr{std::move(op), std::move(right)});
@@ -184,7 +240,11 @@ ExprPtr Parser::unary() {
 
 ExprPtr Parser::primary() {
     if (match({TokenType::Number})) {
-        return std::make_unique<Expr>(LiteralExpr{Value{*previous().number}});
+        const Token& tok = previous();
+        if (tok.isIntegerLiteral) {
+            return std::make_unique<Expr>(LiteralExpr{Value{static_cast<int64_t>(*tok.number)}});
+        }
+        return std::make_unique<Expr>(LiteralExpr{Value{*tok.number}});
     }
 
     if (match({TokenType::Nil})) {

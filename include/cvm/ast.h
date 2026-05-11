@@ -63,6 +63,20 @@ class Expr {
 class Stmt;
 using StmtPtr = std::unique_ptr<Stmt>;
 
+// Type annotation for variable declarations
+enum class DeclType { Auto, Int, Long, Double, Float };
+
+inline std::string_view declTypeName(DeclType t) {
+    switch (t) {
+        case DeclType::Auto:   return "auto";
+        case DeclType::Int:    return "int";
+        case DeclType::Long:   return "long";
+        case DeclType::Double: return "double";
+        case DeclType::Float:  return "float";
+    }
+    return "unknown";
+}
+
 class PrintStmt {
   public:
     ExprPtr expression;
@@ -77,6 +91,7 @@ class VarDeclStmt {
   public:
     Token name;
     ExprPtr initializer;
+    DeclType declType = DeclType::Auto;
 };
 
 class BlockStmt {
@@ -162,7 +177,9 @@ inline std::string toString(const Stmt& stmt) {
             if constexpr (std::is_same_v<T, PrintStmt>) {
                 return "(print " + toString(*node.expression) + ")";
             } else if constexpr (std::is_same_v<T, VarDeclStmt>) {
-                return "(let " + node.name.lexeme + " " + toString(*node.initializer) + ")";
+                std::string prefix = node.declType == DeclType::Auto
+                    ? "let" : std::string(declTypeName(node.declType));
+                return "(" + prefix + " " + node.name.lexeme + " " + toString(*node.initializer) + ")";
             } else if constexpr (std::is_same_v<T, BlockStmt>) {
                 std::string result = "(block";
                 for (const auto& statement : node.statements) {
