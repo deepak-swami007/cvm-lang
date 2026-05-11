@@ -7,6 +7,7 @@ namespace cvm {
 
 Chunk Compiler::compile(const std::vector<StmtPtr>& program) {
     chunk_ = {};
+    declaredGlobals_.clear();
 
     for (const auto& statement : program) {
         emitStatement(*statement);
@@ -24,6 +25,15 @@ void Compiler::emitStatement(const Stmt& stmt) {
             if constexpr (std::is_same_v<T, PrintStmt>) {
                 emitExpression(*node.expression);
                 chunk_.writeOp(OpCode::Print);
+            } else if constexpr (std::is_same_v<T, VarDeclStmt>) {
+                if (declaredGlobals_.contains(node.name.lexeme)) {
+                    throw std::runtime_error("Variable '" + node.name.lexeme + "' is already declared.");
+                }
+
+                emitExpression(*node.initializer);
+                chunk_.writeOp(OpCode::DefineGlobal);
+                chunk_.writeByte(chunk_.addName(node.name.lexeme));
+                declaredGlobals_.insert(node.name.lexeme);
             } else {
                 emitExpression(*node.expression);
                 chunk_.writeOp(OpCode::Pop);
@@ -48,6 +58,15 @@ void Compiler::emitExpression(const Expr& expr) {
                     return;
                 }
                 throw std::runtime_error("Unsupported unary operator '" + node.op.lexeme + "'.");
+            } else if constexpr (std::is_same_v<T, VariableExpr>) {
+                ensureDeclaredGlobal(node.name);
+                chunk_.writeOp(OpCode::GetGlobal);
+                chunk_.writeByte(chunk_.addName(node.name.lexeme));
+            } else if constexpr (std::is_same_v<T, AssignExpr>) {
+                ensureDeclaredGlobal(node.name);
+                emitExpression(*node.value);
+                chunk_.writeOp(OpCode::SetGlobal);
+                chunk_.writeByte(chunk_.addName(node.name.lexeme));
             } else if constexpr (std::is_same_v<T, BinaryExpr>) {
                 emitExpression(*node.left);
                 emitExpression(*node.right);
@@ -78,5 +97,11 @@ void Compiler::emitConstant(Value value) {
     chunk_.writeByte(chunk_.addConstant(value));
 }
 
-}  // namespace cvm
+void Compiler::ensureDeclaredGlobal(const Token& name) const {
+    if (!declaredGlobals_.contains(name.lexeme)) {
+        throw std::runtime_error(
+            "Undefined variable '" + name.lexeme + "' on line " + std::to_string(name.line) + ".");
+    }
+}
 
+}  // namespace cvm

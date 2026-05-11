@@ -12,7 +12,7 @@ $(TARGET): $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
 
 run: $(TARGET)
-	./$(TARGET) examples/first.cvm
+	./$(TARGET) examples/variables.cvm
 
 clean:
 	rm -rf build

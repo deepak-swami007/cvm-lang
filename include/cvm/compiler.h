@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "cvm/ast.h"
@@ -15,9 +17,10 @@ class Compiler {
     void emitStatement(const Stmt& stmt);
     void emitExpression(const Expr& expr);
     void emitConstant(Value value);
+    void ensureDeclaredGlobal(const Token& name) const;
 
     Chunk chunk_;
+    std::unordered_set<std::string> declaredGlobals_;
 };
 
 }  // namespace cvm
-
