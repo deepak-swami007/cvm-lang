@@ -20,7 +20,7 @@ class Lexer {
     char peek() const;
     char peekNext() const;
     void addToken(TokenType type);
-    void addToken(TokenType type, double number);
+    void addToken(TokenType type, double number, bool isInteger = false);
     void scanToken();
     void number();
     void identifier();

@@ -19,6 +19,10 @@ const std::unordered_map<std::string_view, TokenType> kKeywords = {
     {"if", TokenType::If},
     {"else", TokenType::Else},
     {"while", TokenType::While},
+    {"int", TokenType::Int},
+    {"long", TokenType::Long},
+    {"double", TokenType::Double},
+    {"float", TokenType::Float},
 };
 
 }  // namespace
@@ -31,7 +35,7 @@ std::vector<Token> Lexer::scanTokens() {
         scanToken();
     }
 
-    tokens_.push_back(Token{TokenType::EndOfFile, "", line_, std::nullopt});
+    tokens_.push_back(Token{TokenType::EndOfFile, "", line_, std::nullopt, false});
     return tokens_;
 }
 
@@ -66,11 +70,11 @@ char Lexer::peekNext() const {
 }
 
 void Lexer::addToken(TokenType type) {
-    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_, std::nullopt});
+    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_, std::nullopt, false});
 }
 
-void Lexer::addToken(TokenType type, double numberValue) {
-    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_, numberValue});
+void Lexer::addToken(TokenType type, double numberValue, bool isInteger) {
+    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_, numberValue, isInteger});
 }
 
 void Lexer::scanToken() {
@@ -86,6 +90,11 @@ void Lexer::scanToken() {
         case '+': addToken(TokenType::Plus); break;
         case '-': addToken(TokenType::Minus); break;
         case '*': addToken(TokenType::Star); break;
+        case '%': addToken(TokenType::Percent); break;
+        case '^': addToken(TokenType::Caret); break;
+        case '&': addToken(TokenType::Ampersand); break;
+        case '|': addToken(TokenType::Pipe); break;
+        case '~': addToken(TokenType::Tilde); break;
         case '!': addToken(match('=') ? TokenType::BangEqual : TokenType::Bang); break;
         case '=': addToken(match('=') ? TokenType::EqualEqual : TokenType::Equal); break;
         case '<': addToken(match('=') ? TokenType::LessEqual : TokenType::Less); break;
@@ -124,7 +133,9 @@ void Lexer::number() {
         advance();
     }
 
+    bool isInteger = true;
     if (peek() == '.' && isDigit(peekNext())) {
+        isInteger = false;
         advance();
         while (isDigit(peek())) {
             advance();
@@ -133,7 +144,7 @@ void Lexer::number() {
 
     const auto lexeme = source_.substr(start_, current_ - start_);
     try {
-        addToken(TokenType::Number, std::stod(lexeme));
+        addToken(TokenType::Number, std::stod(lexeme), isInteger);
     } catch (const std::invalid_argument&) {
         throw std::runtime_error(
             "Invalid numeric literal '" + lexeme + "' on line " + std::to_string(line_) + ".");

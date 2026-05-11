@@ -17,7 +17,7 @@ class Parser {
 
   private:
     StmtPtr declaration();
-    StmtPtr variableDeclaration();
+    StmtPtr variableDeclaration(DeclType declType = DeclType::Auto);
     StmtPtr statement();
     StmtPtr blockStatement();
     StmtPtr ifStatement();
@@ -30,8 +30,11 @@ class Parser {
     ExprPtr assignment();
     ExprPtr equality();
     ExprPtr comparison();
+    ExprPtr bitwiseOr();
+    ExprPtr bitwiseAnd();
     ExprPtr term();
     ExprPtr factor();
+    ExprPtr power();
     ExprPtr unary();
     ExprPtr primary();
 

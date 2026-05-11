@@ -18,6 +18,11 @@ enum class TokenType {
     Minus,
     Star,
     Slash,
+    Percent,
+    Caret,
+    Ampersand,
+    Pipe,
+    Tilde,
     Bang,
     BangEqual,
     Equal,
@@ -37,6 +42,11 @@ enum class TokenType {
     If,
     Else,
     While,
+    // Type keywords
+    Int,
+    Long,
+    Double,
+    Float,
     EndOfFile,
 };
 
@@ -46,6 +56,7 @@ class Token {
     std::string lexeme;
     std::size_t line;
     std::optional<double> number;
+    bool isIntegerLiteral = false;
 };
 
 inline std::string_view tokenTypeName(TokenType type) {
@@ -61,6 +72,11 @@ inline std::string_view tokenTypeName(TokenType type) {
         case TokenType::Minus: return "Minus";
         case TokenType::Star: return "Star";
         case TokenType::Slash: return "Slash";
+        case TokenType::Percent: return "Percent";
+        case TokenType::Caret: return "Caret";
+        case TokenType::Ampersand: return "Ampersand";
+        case TokenType::Pipe: return "Pipe";
+        case TokenType::Tilde: return "Tilde";
         case TokenType::Bang: return "Bang";
         case TokenType::BangEqual: return "BangEqual";
         case TokenType::Equal: return "Equal";
@@ -80,6 +96,10 @@ inline std::string_view tokenTypeName(TokenType type) {
         case TokenType::If: return "If";
         case TokenType::Else: return "Else";
         case TokenType::While: return "While";
+        case TokenType::Int: return "Int";
+        case TokenType::Long: return "Long";
+        case TokenType::Double: return "Double";
+        case TokenType::Float: return "Float";
         case TokenType::EndOfFile: return "EOF";
     }
 
