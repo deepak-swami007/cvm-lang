@@ -31,6 +31,17 @@ class UnaryExpr {
     ExprPtr right;
 };
 
+class VariableExpr {
+  public:
+    Token name;
+};
+
+class AssignExpr {
+  public:
+    Token name;
+    ExprPtr value;
+};
+
 class BinaryExpr {
   public:
     ExprPtr left;
@@ -40,7 +51,7 @@ class BinaryExpr {
 
 class Expr {
   public:
-    using Variant = std::variant<LiteralExpr, GroupingExpr, UnaryExpr, BinaryExpr>;
+    using Variant = std::variant<LiteralExpr, GroupingExpr, UnaryExpr, VariableExpr, AssignExpr, BinaryExpr>;
 
     template <typename T>
     explicit Expr(T node) : value(std::move(node)) {}
@@ -61,9 +72,15 @@ class ExpressionStmt {
     ExprPtr expression;
 };
 
+class VarDeclStmt {
+  public:
+    Token name;
+    ExprPtr initializer;
+};
+
 class Stmt {
   public:
-    using Variant = std::variant<PrintStmt, ExpressionStmt>;
+    using Variant = std::variant<PrintStmt, ExpressionStmt, VarDeclStmt>;
 
     template <typename T>
     explicit Stmt(T node) : value(std::move(node)) {}
@@ -88,6 +105,10 @@ inline std::string exprToString(const Expr& expr) {
                 return parenthesize("group", {node.expression.get()});
             } else if constexpr (std::is_same_v<T, UnaryExpr>) {
                 return parenthesize(node.op.lexeme, {node.right.get()});
+            } else if constexpr (std::is_same_v<T, VariableExpr>) {
+                return node.name.lexeme;
+            } else if constexpr (std::is_same_v<T, AssignExpr>) {
+                return "(assign " + node.name.lexeme + " " + exprToString(*node.value) + ")";
             } else {
                 return parenthesize(node.op.lexeme, {node.left.get(), node.right.get()});
             }
@@ -118,6 +139,8 @@ inline std::string toString(const Stmt& stmt) {
 
             if constexpr (std::is_same_v<T, PrintStmt>) {
                 return "(print " + toString(*node.expression) + ")";
+            } else if constexpr (std::is_same_v<T, VarDeclStmt>) {
+                return "(let " + node.name.lexeme + " " + toString(*node.initializer) + ")";
             } else {
                 return "(expr " + toString(*node.expression) + ")";
             }

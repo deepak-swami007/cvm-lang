@@ -16,11 +16,14 @@ class Parser {
     std::vector<StmtPtr> parse();
 
   private:
+    StmtPtr declaration();
+    StmtPtr variableDeclaration();
     StmtPtr statement();
     StmtPtr printStatement();
     StmtPtr expressionStatement();
 
     ExprPtr expression();
+    ExprPtr assignment();
     ExprPtr equality();
     ExprPtr comparison();
     ExprPtr term();
@@ -42,4 +45,3 @@ class Parser {
 };
 
 }  // namespace cvm
-

@@ -10,9 +10,24 @@ Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 std::vector<StmtPtr> Parser::parse() {
     std::vector<StmtPtr> program;
     while (!isAtEnd()) {
-        program.push_back(statement());
+        program.push_back(declaration());
     }
     return program;
+}
+
+StmtPtr Parser::declaration() {
+    if (match({TokenType::Let})) {
+        return variableDeclaration();
+    }
+    return statement();
+}
+
+StmtPtr Parser::variableDeclaration() {
+    const Token& name = consume(TokenType::Identifier, "Expected variable name after 'let'.");
+    consume(TokenType::Equal, "Expected '=' after variable name.");
+    ExprPtr initializer = expression();
+    consume(TokenType::Semicolon, "Expected ';' after variable declaration.");
+    return std::make_unique<Stmt>(VarDeclStmt{name, std::move(initializer)});
 }
 
 StmtPtr Parser::statement() {
@@ -35,7 +50,24 @@ StmtPtr Parser::expressionStatement() {
 }
 
 ExprPtr Parser::expression() {
-    return equality();
+    return assignment();
+}
+
+ExprPtr Parser::assignment() {
+    ExprPtr expr = equality();
+
+    if (match({TokenType::Equal})) {
+        Token equals = previous();
+        ExprPtr value = assignment();
+
+        if (auto* variable = std::get_if<VariableExpr>(&expr->value)) {
+            return std::make_unique<Expr>(AssignExpr{variable->name, std::move(value)});
+        }
+
+        error(equals, "Invalid assignment target.");
+    }
+
+    return expr;
 }
 
 ExprPtr Parser::equality() {
@@ -101,13 +133,17 @@ ExprPtr Parser::primary() {
         return std::make_unique<Expr>(LiteralExpr{*previous().number});
     }
 
+    if (match({TokenType::Identifier})) {
+        return std::make_unique<Expr>(VariableExpr{previous()});
+    }
+
     if (match({TokenType::LeftParen})) {
         ExprPtr expr = expression();
         consume(TokenType::RightParen, "Expected ')' after expression.");
         return std::make_unique<Expr>(GroupingExpr{std::move(expr)});
     }
 
-    error(peek(), "Expected a number or parenthesized expression.");
+    error(peek(), "Expected a number, identifier, or parenthesized expression.");
 }
 
 bool Parser::match(std::initializer_list<TokenType> types) {
@@ -159,4 +195,3 @@ const Token& Parser::consume(TokenType type, std::string_view message) {
 }
 
 }  // namespace cvm
-

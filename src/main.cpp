@@ -28,13 +28,15 @@ std::string readFile(const std::string& path) {
 
 int main(int argc, char** argv) {
     try {
+        std::cout << std::unitbuf;
+
         std::string sourcePath;
         if (argc > 1) {
             sourcePath = argv[1];
         } else if (std::filesystem::exists("examples/first.cvm")) {
             sourcePath = "examples/first.cvm";
         } else {
-            throw std::runtime_error("No input file provided. Run ./build/cvm <path-to-script.cvm>.");
+            throw std::runtime_error("No input file provided and examples/first.cvm was not found.");
         }
 
         const std::string source = readFile(sourcePath);
