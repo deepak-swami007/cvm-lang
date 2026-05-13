@@ -1,6 +1,7 @@
 #include "cvm/lexer.h"
 
 #include <cctype>
+#include <cstdint>
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
@@ -10,6 +11,7 @@ namespace cvm {
 namespace {
 
 const std::unordered_map<std::string_view, TokenType> kKeywords = {
+    {"auto", TokenType::Let},
     {"print", TokenType::Print},
     {"input", TokenType::Input},
     {"let", TokenType::Let},
@@ -19,11 +21,32 @@ const std::unordered_map<std::string_view, TokenType> kKeywords = {
     {"if", TokenType::If},
     {"else", TokenType::Else},
     {"while", TokenType::While},
+    {"for", TokenType::For},
+    {"break", TokenType::Break},
+    {"continue", TokenType::Continue},
     {"int", TokenType::Int},
+    {"integer", TokenType::Int},
     {"long", TokenType::Long},
     {"double", TokenType::Double},
     {"float", TokenType::Float},
+    {"bool", TokenType::Bool},
+    {"char", TokenType::Char},
 };
+
+char decodeEscape(char escaped, std::size_t line, std::string_view context) {
+    switch (escaped) {
+        case 'n': return '\n';
+        case 't': return '\t';
+        case 'r': return '\r';
+        case '0': return '\0';
+        case '\\': return '\\';
+        case '\'': return '\'';
+        default:
+            throw std::runtime_error(
+                "Invalid escape sequence '\\" + std::string(1, escaped) + "' in " + std::string(context) +
+                " on line " + std::to_string(line) + ".");
+    }
+}
 
 }  // namespace
 
@@ -35,7 +58,7 @@ std::vector<Token> Lexer::scanTokens() {
         scanToken();
     }
 
-    tokens_.push_back(Token{TokenType::EndOfFile, "", line_, std::nullopt, false});
+    tokens_.push_back(Token{TokenType::EndOfFile, "", line_});
     return tokens_;
 }
 
@@ -69,12 +92,30 @@ char Lexer::peekNext() const {
     return source_[current_ + 1];
 }
 
-void Lexer::addToken(TokenType type) {
-    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_, std::nullopt, false});
+namespace {
+
+bool startsExponent(char current, char next) {
+    if (current != 'e' && current != 'E') {
+        return false;
+    }
+    if (Lexer::isDigit(next)) {
+        return true;
+    }
+    return (next == '+' || next == '-') && false;
 }
 
-void Lexer::addToken(TokenType type, double numberValue, bool isInteger) {
-    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_, numberValue, isInteger});
+}  // namespace
+
+void Lexer::addToken(TokenType type) {
+    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_});
+}
+
+void Lexer::addIntegerToken(std::int64_t value) {
+    tokens_.push_back(Token{TokenType::Number, source_.substr(start_, current_ - start_), line_, value});
+}
+
+void Lexer::addNumberToken(double value) {
+    tokens_.push_back(Token{TokenType::Number, source_.substr(start_, current_ - start_), line_, std::nullopt, value});
 }
 
 void Lexer::scanToken() {
@@ -87,13 +128,13 @@ void Lexer::scanToken() {
         case ',': addToken(TokenType::Comma); break;
         case '.': addToken(TokenType::Dot); break;
         case ';': addToken(TokenType::Semicolon); break;
-        case '+': addToken(TokenType::Plus); break;
-        case '-': addToken(TokenType::Minus); break;
-        case '*': addToken(TokenType::Star); break;
+        case '+': addToken(match('=') ? TokenType::PlusEqual : TokenType::Plus); break;
+        case '-': addToken(match('=') ? TokenType::MinusEqual : TokenType::Minus); break;
+        case '*': addToken(match('=') ? TokenType::StarEqual : TokenType::Star); break;
         case '%': addToken(TokenType::Percent); break;
         case '^': addToken(TokenType::Caret); break;
-        case '&': addToken(TokenType::Ampersand); break;
-        case '|': addToken(TokenType::Pipe); break;
+        case '&': addToken(match('&') ? TokenType::AmpAmp : TokenType::Ampersand); break;
+        case '|': addToken(match('|') ? TokenType::PipePipe : TokenType::Pipe); break;
         case '~': addToken(TokenType::Tilde); break;
         case '!': addToken(match('=') ? TokenType::BangEqual : TokenType::Bang); break;
         case '=': addToken(match('=') ? TokenType::EqualEqual : TokenType::Equal); break;
@@ -101,12 +142,18 @@ void Lexer::scanToken() {
         case '>': addToken(match('=') ? TokenType::GreaterEqual : TokenType::Greater); break;
         case '/':
             if (match('/')) {
+                // Single-line comment
                 while (peek() != '\n' && !isAtEnd()) {
                     advance();
                 }
+            } else if (match('=')) {
+                addToken(TokenType::SlashEqual);
             } else {
                 addToken(TokenType::Slash);
             }
+            break;
+        case '\'':
+            scanCharacter();
             break;
         case ' ':
         case '\r':
@@ -142,16 +189,71 @@ void Lexer::number() {
         }
     }
 
-    const auto lexeme = source_.substr(start_, current_ - start_);
+    const std::string lexeme = source_.substr(start_, current_ - start_);
     try {
-        addToken(TokenType::Number, std::stod(lexeme), isInteger);
+        std::size_t consumed = 0;
+        if (isInteger) {
+            const std::int64_t value = std::stoll(lexeme, &consumed, 10);
+            if (consumed != lexeme.size()) {
+                throw std::runtime_error(
+                    "Invalid numeric literal '" + lexeme + "' on line " + std::to_string(line_) + ".");
+            }
+            addIntegerToken(value);
+            return;
+        }
+
+        const double value = std::stod(lexeme, &consumed);
+        if (consumed != lexeme.size()) {
+            throw std::runtime_error(
+                "Invalid numeric literal '" + lexeme + "' on line " + std::to_string(line_) + ".");
+        }
+        addNumberToken(value);
+    } catch (const std::runtime_error&) {
+        throw;
     } catch (const std::invalid_argument&) {
         throw std::runtime_error(
             "Invalid numeric literal '" + lexeme + "' on line " + std::to_string(line_) + ".");
-    } catch (const std::out_of_range&) {
+    } catch (const std::exception&) {
         throw std::runtime_error(
             "Numeric literal '" + lexeme + "' is out of range on line " + std::to_string(line_) + ".");
     }
+}
+
+void Lexer::scanCharacter() {
+    const std::size_t startLine = line_;
+    if (isAtEnd() || peek() == '\n') {
+        throw std::runtime_error(
+            "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
+    }
+    if (peek() == '\'') {
+        throw std::runtime_error("Empty char literal on line " + std::to_string(startLine) + ".");
+    }
+
+    char value = '\0';
+    if (peek() == '\\') {
+        advance();
+        if (isAtEnd() || peek() == '\n') {
+            throw std::runtime_error(
+                "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
+        }
+        value = decodeEscape(advance(), startLine, "char literal");
+    } else {
+        value = advance();
+    }
+
+    if (peek() != '\'') {
+        if (isAtEnd() || peek() == '\n') {
+            throw std::runtime_error(
+                "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
+        }
+        throw std::runtime_error(
+            "Char literal must contain exactly one character on line " + std::to_string(startLine) + ".");
+    }
+
+    advance();
+    tokens_.push_back(
+        Token{TokenType::Character, source_.substr(start_, current_ - start_), startLine,
+              std::nullopt, std::nullopt, value});
 }
 
 void Lexer::identifier() {

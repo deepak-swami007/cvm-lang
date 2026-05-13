@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -20,9 +21,11 @@ class Lexer {
     char peek() const;
     char peekNext() const;
     void addToken(TokenType type);
-    void addToken(TokenType type, double number, bool isInteger = false);
+    void addIntegerToken(std::int64_t value);
+    void addNumberToken(double value);
     void scanToken();
     void number();
+    void scanCharacter();
     void identifier();
 
     static bool isDigit(char c);
@@ -37,4 +40,3 @@ class Lexer {
 };
 
 }  // namespace cvm
-

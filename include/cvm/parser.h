@@ -1,6 +1,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -22,12 +23,15 @@ class Parser {
     StmtPtr blockStatement();
     StmtPtr ifStatement();
     StmtPtr whileStatement();
+    StmtPtr forStatement();
     StmtPtr printStatement();
     StmtPtr inputStatement();
     StmtPtr expressionStatement();
 
     ExprPtr expression();
     ExprPtr assignment();
+    ExprPtr logicalOr();
+    ExprPtr logicalAnd();
     ExprPtr equality();
     ExprPtr comparison();
     ExprPtr bitwiseOr();
@@ -37,6 +41,7 @@ class Parser {
     ExprPtr power();
     ExprPtr unary();
     ExprPtr primary();
+    std::optional<DeclType> matchDeclarationType();
 
     bool match(std::initializer_list<TokenType> types);
     bool check(TokenType type) const;
