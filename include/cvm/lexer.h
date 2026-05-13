@@ -23,6 +23,7 @@ class Lexer {
     void addToken(TokenType type, double number, bool isInteger = false);
     void scanToken();
     void number();
+    void scanString();
     void identifier();
 
     static bool isDigit(char c);

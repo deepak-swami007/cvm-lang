@@ -14,6 +14,14 @@ class Compiler {
     Chunk compile(const std::vector<StmtPtr>& program);
 
   private:
+    // Loop context for break/continue support
+    struct LoopContext {
+        std::size_t loopStart;
+        bool isForLoop;
+        std::vector<std::size_t> breakJumps;
+        std::vector<std::size_t> continueJumps;  // forward jumps (for-loops only)
+    };
+
     void collectGlobalDeclarations(const std::vector<StmtPtr>& program);
     void collectGlobalDeclarations(const Stmt& stmt);
     void emitStatement(const Stmt& stmt);
@@ -28,6 +36,7 @@ class Compiler {
     Chunk chunk_;
     std::unordered_set<std::string> declaredGlobals_;
     std::unordered_set<std::string> allGlobalNames_;
+    std::vector<LoopContext> loopStack_;
 };
 
 }  // namespace cvm

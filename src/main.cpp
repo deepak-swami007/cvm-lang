@@ -146,18 +146,25 @@ int main(int argc, char** argv) {
             errorType = "SyntaxError";
         } else if (msg.find("Unexpected character") != std::string::npos) {
             errorType = "LexerError";
+        } else if (msg.find("Unterminated string") != std::string::npos) {
+            errorType = "LexerError";
         } else if (msg.find("Undefined variable") != std::string::npos) {
             errorType = "NameError";
-        } else if (msg.find("Division by zero") != std::string::npos) {
+        } else if (msg.find("Division by zero") != std::string::npos || msg.find("Modulo by zero") != std::string::npos) {
             errorType = "MathError";
         } else if (msg.find("already declared") != std::string::npos || msg.find("already defined") != std::string::npos) {
             errorType = "DeclarationError";
-        } else if (msg.find("Expected number") != std::string::npos || msg.find("Expected bool") != std::string::npos) {
+        } else if (msg.find("Expected number") != std::string::npos || msg.find("Expected bool") != std::string::npos ||
+                   msg.find("Cannot add") != std::string::npos) {
             errorType = "TypeError";
         } else if (msg.find("stack") != std::string::npos) {
             errorType = "StackError";
         } else if (msg.find("Invalid input") != std::string::npos) {
             errorType = "InputError";
+        } else if (msg.find("outside of a loop") != std::string::npos) {
+            errorType = "SyntaxError";
+        } else if (msg.find("overflow") != std::string::npos || msg.find("Overflow") != std::string::npos) {
+            errorType = "OverflowError";
         }
 
         std::cerr << lineInfo << errorType << ": " << msg << '\n';

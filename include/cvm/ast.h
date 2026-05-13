@@ -50,9 +50,17 @@ class BinaryExpr {
     ExprPtr right;
 };
 
+// Separate from BinaryExpr for short-circuit evaluation in the compiler
+class LogicalExpr {
+  public:
+    ExprPtr left;
+    Token op;   // AmpAmp or PipePipe
+    ExprPtr right;
+};
+
 class Expr {
   public:
-    using Variant = std::variant<LiteralExpr, GroupingExpr, UnaryExpr, VariableExpr, AssignExpr, BinaryExpr>;
+    using Variant = std::variant<LiteralExpr, GroupingExpr, UnaryExpr, VariableExpr, AssignExpr, BinaryExpr, LogicalExpr>;
 
     template <typename T>
     explicit Expr(T node) : value(std::move(node)) {}
@@ -112,14 +120,33 @@ class WhileStmt {
     StmtPtr body;
 };
 
+class ForStmt {
+  public:
+    StmtPtr initializer;   // may be nullptr (e.g. for(; cond; incr))
+    ExprPtr condition;      // may be nullptr (infinite loop)
+    ExprPtr increment;      // may be nullptr
+    StmtPtr body;
+};
+
 class InputStmt {
   public:
     Token name;
 };
 
+class BreakStmt {
+  public:
+    Token keyword;  // for error reporting
+};
+
+class ContinueStmt {
+  public:
+    Token keyword;  // for error reporting
+};
+
 class Stmt {
   public:
-    using Variant = std::variant<PrintStmt, ExpressionStmt, VarDeclStmt, BlockStmt, IfStmt, WhileStmt, InputStmt>;
+    using Variant = std::variant<PrintStmt, ExpressionStmt, VarDeclStmt, BlockStmt,
+                                  IfStmt, WhileStmt, ForStmt, InputStmt, BreakStmt, ContinueStmt>;
 
     template <typename T>
     explicit Stmt(T node) : value(std::move(node)) {}
@@ -137,6 +164,9 @@ inline std::string exprToString(const Expr& expr) {
             using T = std::decay_t<decltype(node)>;
 
             if constexpr (std::is_same_v<T, LiteralExpr>) {
+                if (isString(node.value)) {
+                    return "\"" + std::get<std::string>(node.value) + "\"";
+                }
                 return formatValue(node.value);
             } else if constexpr (std::is_same_v<T, GroupingExpr>) {
                 return parenthesize("group", {node.expression.get()});
@@ -146,6 +176,8 @@ inline std::string exprToString(const Expr& expr) {
                 return node.name.lexeme;
             } else if constexpr (std::is_same_v<T, AssignExpr>) {
                 return "(assign " + node.name.lexeme + " " + exprToString(*node.value) + ")";
+            } else if constexpr (std::is_same_v<T, LogicalExpr>) {
+                return parenthesize(node.op.lexeme, {node.left.get(), node.right.get()});
             } else {
                 return parenthesize(node.op.lexeme, {node.left.get(), node.right.get()});
             }
@@ -197,8 +229,19 @@ inline std::string toString(const Stmt& stmt) {
                 return result;
             } else if constexpr (std::is_same_v<T, WhileStmt>) {
                 return "(while " + toString(*node.condition) + " " + toString(*node.body) + ")";
+            } else if constexpr (std::is_same_v<T, ForStmt>) {
+                std::string result = "(for";
+                if (node.initializer) result += " init=" + toString(*node.initializer);
+                if (node.condition)   result += " cond=" + toString(*node.condition);
+                if (node.increment)   result += " incr=" + toString(*node.increment);
+                result += " " + toString(*node.body) + ")";
+                return result;
             } else if constexpr (std::is_same_v<T, InputStmt>) {
                 return "(input " + node.name.lexeme + ")";
+            } else if constexpr (std::is_same_v<T, BreakStmt>) {
+                return "(break)";
+            } else if constexpr (std::is_same_v<T, ContinueStmt>) {
+                return "(continue)";
             } else {
                 return "(expr " + toString(*node.expression) + ")";
             }

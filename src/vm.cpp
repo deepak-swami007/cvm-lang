@@ -12,6 +12,14 @@ namespace cvm {
 // If either is double, promote both to double.
 
 static Value numericAdd(const Value& left, const Value& right) {
+    // String concatenation: string + string
+    if (isString(left) && isString(right)) {
+        return Value{std::get<std::string>(left) + std::get<std::string>(right)};
+    }
+    // String + number or number + string → coerce to string and concatenate
+    if (isString(left) || isString(right)) {
+        return Value{formatValue(left) + formatValue(right)};
+    }
     if (isInteger(left) && isInteger(right)) {
         int64_t a = std::get<int64_t>(left), b = std::get<int64_t>(right);
         if (addOverflows(a, b))
@@ -76,7 +84,8 @@ static Value numericPow(const Value& left, const Value& right) {
 static void ensureNumber(const Value& value, const char* context) {
     if (!isNumber(value)) {
         throw std::runtime_error(
-            std::string("Expected number for ") + context + ", got " + valueTypeName(value) + ".");
+            std::string("Expected number for ") + context + ", got " + valueTypeName(value) +
+            (isString(value) ? " (\"" + std::get<std::string>(value) + "\")" : "") + ".");
     }
 }
 
@@ -186,9 +195,14 @@ void VirtualMachine::run(const Chunk& chunk, std::ostream& out, const VMOptions&
             case OpCode::Add: {
                 const Value right = pop();
                 const Value left = pop();
-                ensureNumber(left, "left operand of '+'");
-                ensureNumber(right, "right operand of '+'");
-                push(numericAdd(left, right));
+                // Allow string concatenation and string+number coercion
+                if (isString(left) || isString(right) ||
+                    (isNumber(left) && isNumber(right))) {
+                    push(numericAdd(left, right));
+                } else {
+                    throw std::runtime_error(
+                        "Cannot add " + valueTypeName(left) + " and " + valueTypeName(right) + ".");
+                }
                 break;
             }
             case OpCode::Subtract: {

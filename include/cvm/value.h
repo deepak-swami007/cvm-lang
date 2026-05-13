@@ -9,7 +9,7 @@
 
 namespace cvm {
 
-using Value = std::variant<std::monostate, int64_t, double, bool>;
+using Value = std::variant<std::monostate, int64_t, double, bool, std::string>;
 
 inline bool isNil(const Value& value) {
     return std::holds_alternative<std::monostate>(value);
@@ -31,11 +31,17 @@ inline bool isBoolean(const Value& value) {
     return std::holds_alternative<bool>(value);
 }
 
+inline bool isString(const Value& value) {
+    return std::holds_alternative<std::string>(value);
+}
+
 inline std::string valueTypeName(const Value& value) {
     if (std::holds_alternative<std::monostate>(value)) return "nil";
     if (std::holds_alternative<int64_t>(value)) return "int";
     if (std::holds_alternative<double>(value)) return "double";
-    return "bool";
+    if (std::holds_alternative<bool>(value)) return "bool";
+    if (std::holds_alternative<std::string>(value)) return "string";
+    return "unknown";
 }
 
 // Get numeric value as double (works for both int and double)
@@ -72,6 +78,10 @@ inline std::string formatValue(const Value& value) {
         return out.str();
     }
 
+    if (const auto* str = std::get_if<std::string>(&value)) {
+        return *str;
+    }
+
     return std::get<bool>(value) ? "true" : "false";
 }
 
@@ -88,6 +98,11 @@ inline bool valuesEqual(const Value& left, const Value& right) {
     // bool == bool
     if (isBoolean(left) && isBoolean(right)) {
         return std::get<bool>(left) == std::get<bool>(right);
+    }
+
+    // string == string
+    if (isString(left) && isString(right)) {
+        return std::get<std::string>(left) == std::get<std::string>(right);
     }
 
     return false;

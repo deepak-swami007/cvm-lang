@@ -1,6 +1,83 @@
-int x = 0;
-input x;
+// ================================================
+// CVM++ Feature Demo — All 5 New Features
+// ================================================
 
-x = 10^21;
+// === 1. String Support ===
+let greeting = "Hello";
+let name = "CVM++";
+let message = greeting + ", " + name + "!";
+print message;
 
-print x;
+// String + number coercion
+let version = 2;
+print "Version: " + version;
+
+// Escape sequences
+print "Line 1\nLine 2\tTabbed";
+
+// === 2. For Loops ===
+print "--- For Loop: Count to 5 ---";
+for (let i = 1; i <= 5; i = i + 1) {
+    print i;
+}
+
+// For loop with no initializer
+let sum = 0;
+let n = 1;
+for (; n <= 10; n = n + 1) {
+    sum = sum + n;
+}
+print "Sum 1..10 = " + sum;
+
+// === 3. Logical AND && / OR || ===
+print "--- Logical Operators ---";
+let x = 5;
+
+if (x > 0 && x < 10) {
+    print "x is between 0 and 10";
+}
+
+let flag = false;
+if (flag || x == 5) {
+    print "flag is false but x is 5, so OR passed";
+}
+
+// Short-circuit: second condition never evaluated
+let safe = true;
+if (safe || x > 100) {
+    print "Short-circuit: didn't check x > 100";
+}
+
+// === 4. Break / Continue ===
+print "--- Break: stop at 3 ---";
+for (let i = 1; i <= 10; i = i + 1) {
+    if (i > 3) {
+        break;
+    }
+    print i;
+}
+
+print "--- Continue: skip evens ---";
+for (let j = 1; j <= 6; j = j + 1) {
+    if (j % 2 == 0) {
+        continue;
+    }
+    print j;
+}
+
+// === 5. Compound Assignment ===
+print "--- Compound Assignment ---";
+let val = 10;
+val += 5;
+print val;
+
+val -= 3;
+print val;
+
+val *= 2;
+print val;
+
+val /= 4;
+print val;
+
+print "All features working!";

@@ -22,12 +22,15 @@ class Parser {
     StmtPtr blockStatement();
     StmtPtr ifStatement();
     StmtPtr whileStatement();
+    StmtPtr forStatement();
     StmtPtr printStatement();
     StmtPtr inputStatement();
     StmtPtr expressionStatement();
 
     ExprPtr expression();
     ExprPtr assignment();
+    ExprPtr logicalOr();
+    ExprPtr logicalAnd();
     ExprPtr equality();
     ExprPtr comparison();
     ExprPtr bitwiseOr();

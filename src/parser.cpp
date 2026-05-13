@@ -66,6 +66,19 @@ StmtPtr Parser::statement() {
     if (match({TokenType::While})) {
         return whileStatement();
     }
+    if (match({TokenType::For})) {
+        return forStatement();
+    }
+    if (match({TokenType::Break})) {
+        Token keyword = previous();
+        consume(TokenType::Semicolon, "Expected ';' after 'break'.");
+        return std::make_unique<Stmt>(BreakStmt{keyword});
+    }
+    if (match({TokenType::Continue})) {
+        Token keyword = previous();
+        consume(TokenType::Semicolon, "Expected ';' after 'continue'.");
+        return std::make_unique<Stmt>(ContinueStmt{keyword});
+    }
     if (match({TokenType::LeftBrace})) {
         return blockStatement();
     }
@@ -104,6 +117,49 @@ StmtPtr Parser::whileStatement() {
     return std::make_unique<Stmt>(WhileStmt{std::move(condition), std::move(body)});
 }
 
+StmtPtr Parser::forStatement() {
+    consume(TokenType::LeftParen, "Expected '(' after 'for'.");
+
+    // Initializer
+    StmtPtr initializer;
+    if (match({TokenType::Semicolon})) {
+        // No initializer
+    } else if (match({TokenType::Let})) {
+        initializer = variableDeclaration(DeclType::Auto);
+    } else if (match({TokenType::Int})) {
+        initializer = variableDeclaration(DeclType::Int);
+    } else if (match({TokenType::Long})) {
+        match({TokenType::Long});
+        initializer = variableDeclaration(DeclType::Long);
+    } else if (match({TokenType::Double})) {
+        initializer = variableDeclaration(DeclType::Double);
+    } else if (match({TokenType::Float})) {
+        initializer = variableDeclaration(DeclType::Float);
+    } else {
+        initializer = expressionStatement();
+    }
+
+    // Condition
+    ExprPtr condition;
+    if (!check(TokenType::Semicolon)) {
+        condition = expression();
+    }
+    consume(TokenType::Semicolon, "Expected ';' after for-loop condition.");
+
+    // Increment
+    ExprPtr increment;
+    if (!check(TokenType::RightParen)) {
+        increment = expression();
+    }
+    consume(TokenType::RightParen, "Expected ')' after for clauses.");
+
+    // Body
+    StmtPtr body = declaration();
+
+    return std::make_unique<Stmt>(ForStmt{
+        std::move(initializer), std::move(condition), std::move(increment), std::move(body)});
+}
+
 StmtPtr Parser::printStatement() {
     ExprPtr value = expression();
     consume(TokenType::Semicolon, "Expected ';' after value.");
@@ -127,7 +183,7 @@ ExprPtr Parser::expression() {
 }
 
 ExprPtr Parser::assignment() {
-    ExprPtr expr = equality();
+    ExprPtr expr = logicalOr();
 
     if (match({TokenType::Equal})) {
         Token equals = previous();
@@ -138,6 +194,59 @@ ExprPtr Parser::assignment() {
         }
 
         error(equals, "Invalid assignment target.");
+    }
+
+    // Compound assignment: +=, -=, *=, /=
+    if (match({TokenType::PlusEqual, TokenType::MinusEqual, TokenType::StarEqual, TokenType::SlashEqual})) {
+        Token op = previous();
+
+        // Determine the arithmetic operator token type
+        TokenType arithType;
+        std::string arithLexeme;
+        switch (op.type) {
+            case TokenType::PlusEqual:  arithType = TokenType::Plus;  arithLexeme = "+"; break;
+            case TokenType::MinusEqual: arithType = TokenType::Minus; arithLexeme = "-"; break;
+            case TokenType::StarEqual:  arithType = TokenType::Star;  arithLexeme = "*"; break;
+            case TokenType::SlashEqual: arithType = TokenType::Slash; arithLexeme = "/"; break;
+            default: error(op, "Unknown compound assignment operator."); break;
+        }
+
+        ExprPtr rhs = assignment();
+
+        if (auto* variable = std::get_if<VariableExpr>(&expr->value)) {
+            // Desugar: x += e  →  x = x + e
+            Token arithToken{arithType, arithLexeme, op.line, std::nullopt, false, ""};
+            auto varRead = std::make_unique<Expr>(VariableExpr{variable->name});
+            auto binExpr = std::make_unique<Expr>(
+                BinaryExpr{std::move(varRead), std::move(arithToken), std::move(rhs)});
+            return std::make_unique<Expr>(AssignExpr{variable->name, std::move(binExpr)});
+        }
+
+        error(op, "Invalid compound assignment target.");
+    }
+
+    return expr;
+}
+
+ExprPtr Parser::logicalOr() {
+    ExprPtr expr = logicalAnd();
+
+    while (match({TokenType::PipePipe})) {
+        Token op = previous();
+        ExprPtr right = logicalAnd();
+        expr = std::make_unique<Expr>(LogicalExpr{std::move(expr), std::move(op), std::move(right)});
+    }
+
+    return expr;
+}
+
+ExprPtr Parser::logicalAnd() {
+    ExprPtr expr = equality();
+
+    while (match({TokenType::AmpAmp})) {
+        Token op = previous();
+        ExprPtr right = equality();
+        expr = std::make_unique<Expr>(LogicalExpr{std::move(expr), std::move(op), std::move(right)});
     }
 
     return expr;
@@ -245,6 +354,11 @@ ExprPtr Parser::primary() {
             return std::make_unique<Expr>(LiteralExpr{Value{static_cast<int64_t>(*tok.number)}});
         }
         return std::make_unique<Expr>(LiteralExpr{Value{*tok.number}});
+    }
+
+    if (match({TokenType::String})) {
+        const Token& tok = previous();
+        return std::make_unique<Expr>(LiteralExpr{Value{tok.stringValue}});
     }
 
     if (match({TokenType::Nil})) {

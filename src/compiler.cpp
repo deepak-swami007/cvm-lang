@@ -10,6 +10,7 @@ Chunk Compiler::compile(const std::vector<StmtPtr> &program) {
   chunk_ = {};
   declaredGlobals_.clear();
   allGlobalNames_.clear();
+  loopStack_.clear();
 
   collectGlobalDeclarations(program);
   for (const std::string &name : chunk_.names) {
@@ -54,8 +55,13 @@ void Compiler::collectGlobalDeclarations(const Stmt &stmt) {
           }
         } else if constexpr (std::is_same_v<T, WhileStmt>) {
           collectGlobalDeclarations(*node.body);
+        } else if constexpr (std::is_same_v<T, ForStmt>) {
+          if (node.initializer) {
+            collectGlobalDeclarations(*node.initializer);
+          }
+          collectGlobalDeclarations(*node.body);
         }
-        // InputStmt does not declare new globals, nothing to collect.
+        // InputStmt, BreakStmt, ContinueStmt do not declare new globals.
       },
       stmt.value);
 }
@@ -96,20 +102,102 @@ void Compiler::emitStatement(const Stmt &stmt) {
             emitStatement(*node.elseBranch);
           }
           patchJump(elseJump);
+
         } else if constexpr (std::is_same_v<T, WhileStmt>) {
           const std::size_t loopStart = chunk_.code.size();
           emitExpression(*node.condition);
           const std::size_t exitJump = emitJump(OpCode::JumpIfFalse);
           chunk_.writeOp(OpCode::Pop);
+
+          // Push loop context
+          loopStack_.push_back({loopStart, false, {}, {}});
           emitStatement(*node.body);
+          LoopContext ctx = std::move(loopStack_.back());
+          loopStack_.pop_back();
+
           emitLoop(loopStart);
           patchJump(exitJump);
           chunk_.writeOp(OpCode::Pop);
+
+          // Patch break jumps to after the loop
+          for (std::size_t breakJump : ctx.breakJumps) {
+            patchJump(breakJump);
+          }
+
+        } else if constexpr (std::is_same_v<T, ForStmt>) {
+          // Compile initializer (if any)
+          if (node.initializer) {
+            emitStatement(*node.initializer);
+          }
+
+          const std::size_t loopStart = chunk_.code.size();
+
+          // Compile condition (or push true for infinite loop)
+          if (node.condition) {
+            emitExpression(*node.condition);
+          } else {
+            chunk_.writeOp(OpCode::True);
+          }
+          const std::size_t exitJump = emitJump(OpCode::JumpIfFalse);
+          chunk_.writeOp(OpCode::Pop);
+
+          // Push loop context (for-loop: continue jumps need patching)
+          loopStack_.push_back({loopStart, true, {}, {}});
+          emitStatement(*node.body);
+          LoopContext ctx = std::move(loopStack_.back());
+          loopStack_.pop_back();
+
+          // Patch continue jumps to here (the increment)
+          for (std::size_t continueJump : ctx.continueJumps) {
+            patchJump(continueJump);
+          }
+
+          // Compile increment (if any)
+          if (node.increment) {
+            emitExpression(*node.increment);
+            chunk_.writeOp(OpCode::Pop);
+          }
+
+          emitLoop(loopStart);
+          patchJump(exitJump);
+          chunk_.writeOp(OpCode::Pop);
+
+          // Patch break jumps to after the loop
+          for (std::size_t breakJump : ctx.breakJumps) {
+            patchJump(breakJump);
+          }
+
         } else if constexpr (std::is_same_v<T, InputStmt>) {
           ensureDeclaredGlobal(node.name);
           chunk_.writeOp(OpCode::Input);
           chunk_.writeByte(chunk_.addName(node.name.lexeme));
+
+        } else if constexpr (std::is_same_v<T, BreakStmt>) {
+          if (loopStack_.empty()) {
+            throw std::runtime_error(
+                "Cannot use 'break' outside of a loop on line " +
+                std::to_string(node.keyword.line) + ".");
+          }
+          const std::size_t breakJump = emitJump(OpCode::Jump);
+          loopStack_.back().breakJumps.push_back(breakJump);
+
+        } else if constexpr (std::is_same_v<T, ContinueStmt>) {
+          if (loopStack_.empty()) {
+            throw std::runtime_error(
+                "Cannot use 'continue' outside of a loop on line " +
+                std::to_string(node.keyword.line) + ".");
+          }
+          if (loopStack_.back().isForLoop) {
+            // For-loop: jump forward to increment (patched later)
+            const std::size_t continueJump = emitJump(OpCode::Jump);
+            loopStack_.back().continueJumps.push_back(continueJump);
+          } else {
+            // While-loop: jump back to condition
+            emitLoop(loopStack_.back().loopStart);
+          }
+
         } else {
+          // ExpressionStmt
           emitExpression(*node.expression);
           chunk_.writeOp(OpCode::Pop);
         }
@@ -157,6 +245,27 @@ void Compiler::emitExpression(const Expr &expr) {
           emitExpression(*node.value);
           chunk_.writeOp(OpCode::SetGlobal);
           chunk_.writeByte(chunk_.addName(node.name.lexeme));
+
+        } else if constexpr (std::is_same_v<T, LogicalExpr>) {
+          // Short-circuit evaluation
+          if (node.op.type == TokenType::AmpAmp) {
+            // AND: if left is false, skip right
+            emitExpression(*node.left);
+            const std::size_t endJump = emitJump(OpCode::JumpIfFalse);
+            chunk_.writeOp(OpCode::Pop);
+            emitExpression(*node.right);
+            patchJump(endJump);
+          } else {
+            // OR: if left is true, skip right
+            emitExpression(*node.left);
+            const std::size_t falseJump = emitJump(OpCode::JumpIfFalse);
+            const std::size_t endJump = emitJump(OpCode::Jump);
+            patchJump(falseJump);
+            chunk_.writeOp(OpCode::Pop);
+            emitExpression(*node.right);
+            patchJump(endJump);
+          }
+
         } else if constexpr (std::is_same_v<T, BinaryExpr>) {
           emitExpression(*node.left);
           emitExpression(*node.right);
