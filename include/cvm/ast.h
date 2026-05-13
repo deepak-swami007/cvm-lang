@@ -8,6 +8,7 @@
 #include <variant>
 #include <vector>
 
+#include "cvm/type.h"
 #include "cvm/token.h"
 #include "cvm/value.h"
 
@@ -70,20 +71,6 @@ class Expr {
 
 class Stmt;
 using StmtPtr = std::unique_ptr<Stmt>;
-
-// Type annotation for variable declarations
-enum class DeclType { Auto, Int, Long, Double, Float };
-
-inline std::string_view declTypeName(DeclType t) {
-    switch (t) {
-        case DeclType::Auto:   return "auto";
-        case DeclType::Int:    return "int";
-        case DeclType::Long:   return "long";
-        case DeclType::Double: return "double";
-        case DeclType::Float:  return "float";
-    }
-    return "unknown";
-}
 
 class PrintStmt {
   public:
@@ -164,8 +151,8 @@ inline std::string exprToString(const Expr& expr) {
             using T = std::decay_t<decltype(node)>;
 
             if constexpr (std::is_same_v<T, LiteralExpr>) {
-                if (isString(node.value)) {
-                    return "\"" + std::get<std::string>(node.value) + "\"";
+                if (isChar(node.value)) {
+                    return "'" + escapeForDisplay(charToString(std::get<char>(node.value))) + "'";
                 }
                 return formatValue(node.value);
             } else if constexpr (std::is_same_v<T, GroupingExpr>) {
@@ -210,7 +197,7 @@ inline std::string toString(const Stmt& stmt) {
                 return "(print " + toString(*node.expression) + ")";
             } else if constexpr (std::is_same_v<T, VarDeclStmt>) {
                 std::string prefix = node.declType == DeclType::Auto
-                    ? "let" : std::string(declTypeName(node.declType));
+                    ? "auto" : std::string(declTypeName(node.declType));
                 return "(" + prefix + " " + node.name.lexeme + " " + toString(*node.initializer) + ")";
             } else if constexpr (std::is_same_v<T, BlockStmt>) {
                 std::string result = "(block";

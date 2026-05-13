@@ -4,31 +4,38 @@ CVM++ is a bytecode-compiled programming language with its own virtual machine, 
 
 ## Features
 
-- **Variables** — declare with `let`, assign with `=`
+- **Typed variables** — `int`, `long`, `double`, `float`, `bool`, `char`
+- **Auto variables** — `auto` (with legacy `let` still accepted for compatibility)
 - **Arithmetic** — `+`, `-`, `*`, `/` on numbers
 - **Comparisons** — `==`, `!=`, `<`, `<=`, `>`, `>=`
 - **Booleans & Nil** — `true`, `false`, `nil`
+- **Characters** — single-quoted literals like `'A'` and `'\n'`
 - **Unary operators** — `-` (negate), `!` (logical not)
 - **Control flow** — `if` / `else`, `while` loops
 - **Print** — `print <expression>;`
-- **Input** — `input <variable>;` (reads a number from the user)
+- **Input** — `input <variable>;` (parses primitive values by declared type, or infers for `auto`)
 - **Comments** — `//` single-line comments
 
 ## Language Syntax
 
 ```
 // Variable declaration
-let x = 10;
-let name = 0;
+int x = 10;
+long total = 0;
+char initial = 'C';
+bool enabled = true;
+auto inferred = 5.5;
 
-// Input from user (reads a number)
+// Input from user
 input x;
+input initial;
 
 // Print output
 print x;
+print initial;
 
 // Arithmetic
-let result = (x + 5) * 2 - 1;
+int result = (x + 5) * 2 - 1;
 
 // Conditionals
 if (x == 0) {
@@ -81,8 +88,9 @@ CVM++ provides clear error messages with line numbers and error types:
 | `TypeError` | Wrong operand types |
 | `MathError` | Division by zero |
 | `DeclarationError` | Duplicate variable declarations |
-| `InputError` | Non-numeric input |
+| `InputError` | Invalid primitive input |
 | `StackError` | VM stack underflow |
+| `OverflowError` | Integer or floating-point overflow |
 
 Example error output:
 ```
@@ -98,7 +106,7 @@ CVM++/
 │   ├── lexer.h        # Lexer (tokenizer) interface
 │   ├── ast.h          # AST node definitions
 │   ├── parser.h       # Parser interface
-│   ├── value.h        # Runtime value types (number, bool, nil)
+│   ├── value.h        # Runtime value types (number, bool, char, nil)
 │   ├── bytecode.h     # Opcodes, Chunk, and disassembler
 │   ├── compiler.h     # Compiler interface
 │   └── vm.h           # Virtual machine interface

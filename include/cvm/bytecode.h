@@ -7,6 +7,7 @@
 #include <string_view>
 #include <vector>
 
+#include "cvm/type.h"
 #include "cvm/value.h"
 
 namespace cvm {
@@ -51,6 +52,7 @@ class Chunk {
     std::vector<std::uint8_t> code;
     std::vector<Value> constants;
     std::vector<std::string> names;
+    std::vector<DeclType> nameTypes;
 
     void writeOp(OpCode op) {
         code.push_back(static_cast<std::uint8_t>(op));
@@ -68,9 +70,12 @@ class Chunk {
         return static_cast<std::uint8_t>(constants.size() - 1);
     }
 
-    std::uint8_t addName(const std::string& name) {
+    std::uint8_t addName(const std::string& name, DeclType declType = DeclType::Auto) {
         for (std::size_t index = 0; index < names.size(); ++index) {
             if (names[index] == name) {
+                if (declType != DeclType::Auto) {
+                    nameTypes[index] = declType;
+                }
                 return static_cast<std::uint8_t>(index);
             }
         }
@@ -80,6 +85,7 @@ class Chunk {
         }
 
         names.push_back(name);
+        nameTypes.push_back(declType);
         return static_cast<std::uint8_t>(names.size() - 1);
     }
 };

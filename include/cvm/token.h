@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -50,7 +51,7 @@ enum class TokenType {
     // Literals
     Identifier,
     Number,
-    String,
+    Character,
 
     // Keywords
     Print,
@@ -71,19 +72,55 @@ enum class TokenType {
     Long,
     Double,
     Float,
+    Bool,
+    Char,
 
     EndOfFile,
 };
 
 class Token {
   public:
+    Token() = default;
+    Token(TokenType type,
+          std::string lexeme,
+          std::size_t line,
+          std::optional<std::int64_t> integer = std::nullopt,
+          std::optional<double> number = std::nullopt,
+          std::optional<char> character = std::nullopt)
+        : type(type),
+          lexeme(std::move(lexeme)),
+          line(line),
+          integer(integer),
+          number(number),
+          character(character) {}
+
     TokenType type;
     std::string lexeme;
     std::size_t line;
+    std::optional<std::int64_t> integer;
     std::optional<double> number;
-    bool isIntegerLiteral = false;
-    std::string stringValue;  // populated only for String tokens
+    std::optional<char> character;
 };
+
+inline std::string escapeForDisplay(std::string_view text) {
+    std::string escaped;
+    escaped.reserve(text.size());
+
+    for (char c : text) {
+        switch (c) {
+            case '\n': escaped += "\\n"; break;
+            case '\t': escaped += "\\t"; break;
+            case '\r': escaped += "\\r"; break;
+            case '\\': escaped += "\\\\"; break;
+            case '"': escaped += "\\\""; break;
+            case '\'': escaped += "\\'"; break;
+            case '\0': escaped += "\\0"; break;
+            default: escaped += c; break;
+        }
+    }
+
+    return escaped;
+}
 
 inline std::string_view tokenTypeName(TokenType type) {
     switch (type) {
@@ -119,7 +156,7 @@ inline std::string_view tokenTypeName(TokenType type) {
         case TokenType::SlashEqual: return "SlashEqual";
         case TokenType::Identifier: return "Identifier";
         case TokenType::Number: return "Number";
-        case TokenType::String: return "String";
+        case TokenType::Character: return "Character";
         case TokenType::Print: return "Print";
         case TokenType::Input: return "Input";
         case TokenType::Let: return "Let";
@@ -136,6 +173,8 @@ inline std::string_view tokenTypeName(TokenType type) {
         case TokenType::Long: return "Long";
         case TokenType::Double: return "Double";
         case TokenType::Float: return "Float";
+        case TokenType::Bool: return "Bool";
+        case TokenType::Char: return "Char";
         case TokenType::EndOfFile: return "EOF";
     }
 
@@ -144,11 +183,14 @@ inline std::string_view tokenTypeName(TokenType type) {
 
 inline std::string formatToken(const Token& token) {
     std::string result = std::string(tokenTypeName(token.type)) + " \"" + token.lexeme + "\"";
+    if (token.integer.has_value()) {
+        result += " value=" + std::to_string(*token.integer);
+    }
     if (token.number.has_value()) {
         result += " value=" + std::to_string(*token.number);
     }
-    if (!token.stringValue.empty()) {
-        result += " str=\"" + token.stringValue + "\"";
+    if (token.character.has_value()) {
+        result += " char='" + escapeForDisplay(std::string(1, *token.character)) + "'";
     }
     result += " line=" + std::to_string(token.line);
     return result;

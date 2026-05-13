@@ -6,6 +6,20 @@
 
 namespace cvm {
 
+namespace {
+
+void emitValueLiteral(Chunk& chunk, const Value& value) {
+  if (isNil(value)) {
+    chunk.writeOp(OpCode::Nil);
+    return;
+  }
+
+  chunk.writeOp(OpCode::Constant);
+  chunk.writeByte(chunk.addConstant(value));
+}
+
+}  // namespace
+
 Chunk Compiler::compile(const std::vector<StmtPtr> &program) {
   chunk_ = {};
   declaredGlobals_.clear();
@@ -13,10 +27,10 @@ Chunk Compiler::compile(const std::vector<StmtPtr> &program) {
   loopStack_.clear();
 
   collectGlobalDeclarations(program);
-  for (const std::string &name : chunk_.names) {
-    emitNil();
+  for (std::size_t index = 0; index < chunk_.names.size(); ++index) {
+    emitValueLiteral(chunk_, defaultValueForDeclType(chunk_.nameTypes[index]));
     chunk_.writeOp(OpCode::DefineGlobal);
-    chunk_.writeByte(chunk_.addName(name));
+    chunk_.writeByte(static_cast<std::uint8_t>(index));
   }
 
   for (const auto &statement : program) {
@@ -45,7 +59,7 @@ void Compiler::collectGlobalDeclarations(const Stmt &stmt) {
           }
 
           allGlobalNames_.insert(node.name.lexeme);
-          chunk_.addName(node.name.lexeme);
+          chunk_.addName(node.name.lexeme, node.declType);
         } else if constexpr (std::is_same_v<T, BlockStmt>) {
           collectGlobalDeclarations(node.statements);
         } else if constexpr (std::is_same_v<T, IfStmt>) {
@@ -76,14 +90,8 @@ void Compiler::emitStatement(const Stmt &stmt) {
           chunk_.writeOp(OpCode::Print);
         } else if constexpr (std::is_same_v<T, VarDeclStmt>) {
           emitExpression(*node.initializer);
-          // Emit type cast if a specific type was declared
-          if (node.declType == DeclType::Int || node.declType == DeclType::Long) {
-            chunk_.writeOp(OpCode::CastToInt);
-          } else if (node.declType == DeclType::Double || node.declType == DeclType::Float) {
-            chunk_.writeOp(OpCode::CastToDouble);
-          }
           chunk_.writeOp(OpCode::SetGlobal);
-          chunk_.writeByte(chunk_.addName(node.name.lexeme));
+          chunk_.writeByte(chunk_.addName(node.name.lexeme, node.declType));
           chunk_.writeOp(OpCode::Pop);
           declaredGlobals_.insert(node.name.lexeme);
         } else if constexpr (std::is_same_v<T, BlockStmt>) {

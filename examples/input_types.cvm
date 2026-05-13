@@ -1,0 +1,11 @@
+int count;
+char initial;
+bool enabled;
+
+input count;
+input initial;
+input enabled;
+
+print count;
+print initial;
+print enabled;

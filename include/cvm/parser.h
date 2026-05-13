@@ -1,6 +1,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -40,6 +41,7 @@ class Parser {
     ExprPtr power();
     ExprPtr unary();
     ExprPtr primary();
+    std::optional<DeclType> matchDeclarationType();
 
     bool match(std::initializer_list<TokenType> types);
     bool check(TokenType type) const;

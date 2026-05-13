@@ -126,7 +126,6 @@ int main(int argc, char** argv) {
         // === Bytecode ===
         // std::cout << "=== Bytecode ===\n" << cvm::disassemble(chunk) << "\n\n";
 
-        std::cout << "=== VM Output ===\n";
         cvm::VirtualMachine vm;
         vm.run(chunk, std::cout, vmOptions);
     } catch (const std::exception& error) {
@@ -146,8 +145,13 @@ int main(int argc, char** argv) {
             errorType = "SyntaxError";
         } else if (msg.find("Unexpected character") != std::string::npos) {
             errorType = "LexerError";
-        } else if (msg.find("Unterminated string") != std::string::npos) {
+        } else if (msg.find("char literal") != std::string::npos || msg.find("Char literal") != std::string::npos ||
+                   msg.find("escape sequence") != std::string::npos) {
             errorType = "LexerError";
+        } else if (msg.find("Invalid numeric literal") != std::string::npos) {
+            errorType = "LexerError";
+        } else if (msg.find("Numeric literal") != std::string::npos && msg.find("out of range") != std::string::npos) {
+            errorType = "OverflowError";
         } else if (msg.find("Undefined variable") != std::string::npos) {
             errorType = "NameError";
         } else if (msg.find("Division by zero") != std::string::npos || msg.find("Modulo by zero") != std::string::npos) {
@@ -155,11 +159,14 @@ int main(int argc, char** argv) {
         } else if (msg.find("already declared") != std::string::npos || msg.find("already defined") != std::string::npos) {
             errorType = "DeclarationError";
         } else if (msg.find("Expected number") != std::string::npos || msg.find("Expected bool") != std::string::npos ||
-                   msg.find("Cannot add") != std::string::npos) {
+                   msg.find("Expected int") != std::string::npos || msg.find("Cannot add") != std::string::npos ||
+                   msg.find("Cannot assign") != std::string::npos) {
             errorType = "TypeError";
         } else if (msg.find("stack") != std::string::npos) {
             errorType = "StackError";
-        } else if (msg.find("Invalid input") != std::string::npos) {
+        } else if (msg.find("Invalid input") != std::string::npos ||
+                   msg.find("input for variable") != std::string::npos ||
+                   msg.find("input for auto input") != std::string::npos) {
             errorType = "InputError";
         } else if (msg.find("outside of a loop") != std::string::npos) {
             errorType = "SyntaxError";

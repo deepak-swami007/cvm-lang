@@ -1,6 +1,7 @@
 #include "cvm/lexer.h"
 
 #include <cctype>
+#include <cstdint>
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
@@ -10,6 +11,7 @@ namespace cvm {
 namespace {
 
 const std::unordered_map<std::string_view, TokenType> kKeywords = {
+    {"auto", TokenType::Let},
     {"print", TokenType::Print},
     {"input", TokenType::Input},
     {"let", TokenType::Let},
@@ -26,7 +28,24 @@ const std::unordered_map<std::string_view, TokenType> kKeywords = {
     {"long", TokenType::Long},
     {"double", TokenType::Double},
     {"float", TokenType::Float},
+    {"bool", TokenType::Bool},
+    {"char", TokenType::Char},
 };
+
+char decodeEscape(char escaped, std::size_t line, std::string_view context) {
+    switch (escaped) {
+        case 'n': return '\n';
+        case 't': return '\t';
+        case 'r': return '\r';
+        case '0': return '\0';
+        case '\\': return '\\';
+        case '\'': return '\'';
+        default:
+            throw std::runtime_error(
+                "Invalid escape sequence '\\" + std::string(1, escaped) + "' in " + std::string(context) +
+                " on line " + std::to_string(line) + ".");
+    }
+}
 
 }  // namespace
 
@@ -38,7 +57,7 @@ std::vector<Token> Lexer::scanTokens() {
         scanToken();
     }
 
-    tokens_.push_back(Token{TokenType::EndOfFile, "", line_, std::nullopt, false, ""});
+    tokens_.push_back(Token{TokenType::EndOfFile, "", line_});
     return tokens_;
 }
 
@@ -73,11 +92,15 @@ char Lexer::peekNext() const {
 }
 
 void Lexer::addToken(TokenType type) {
-    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_, std::nullopt, false, ""});
+    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_});
 }
 
-void Lexer::addToken(TokenType type, double numberValue, bool isInteger) {
-    tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_, numberValue, isInteger, ""});
+void Lexer::addIntegerToken(std::int64_t value) {
+    tokens_.push_back(Token{TokenType::Number, source_.substr(start_, current_ - start_), line_, value});
+}
+
+void Lexer::addNumberToken(double value) {
+    tokens_.push_back(Token{TokenType::Number, source_.substr(start_, current_ - start_), line_, std::nullopt, value});
 }
 
 void Lexer::scanToken() {
@@ -114,8 +137,8 @@ void Lexer::scanToken() {
                 addToken(TokenType::Slash);
             }
             break;
-        case '"':
-            scanString();
+        case '\'':
+            scanCharacter();
             break;
         case ' ':
         case '\r':
@@ -151,55 +174,71 @@ void Lexer::number() {
         }
     }
 
-    const auto lexeme = source_.substr(start_, current_ - start_);
+    const std::string lexeme = source_.substr(start_, current_ - start_);
     try {
-        addToken(TokenType::Number, std::stod(lexeme), isInteger);
+        std::size_t consumed = 0;
+        if (isInteger) {
+            const std::int64_t value = std::stoll(lexeme, &consumed, 10);
+            if (consumed != lexeme.size()) {
+                throw std::runtime_error(
+                    "Invalid numeric literal '" + lexeme + "' on line " + std::to_string(line_) + ".");
+            }
+            addIntegerToken(value);
+            return;
+        }
+
+        const double value = std::stod(lexeme, &consumed);
+        if (consumed != lexeme.size()) {
+            throw std::runtime_error(
+                "Invalid numeric literal '" + lexeme + "' on line " + std::to_string(line_) + ".");
+        }
+        addNumberToken(value);
+    } catch (const std::runtime_error&) {
+        throw;
     } catch (const std::invalid_argument&) {
         throw std::runtime_error(
             "Invalid numeric literal '" + lexeme + "' on line " + std::to_string(line_) + ".");
-    } catch (const std::out_of_range&) {
+    } catch (const std::exception&) {
         throw std::runtime_error(
             "Numeric literal '" + lexeme + "' is out of range on line " + std::to_string(line_) + ".");
     }
 }
 
-void Lexer::scanString() {
+void Lexer::scanCharacter() {
     const std::size_t startLine = line_;
-    while (peek() != '"' && !isAtEnd()) {
-        if (peek() == '\n') ++line_;
-        advance();
-    }
-
-    if (isAtEnd()) {
+    if (isAtEnd() || peek() == '\n') {
         throw std::runtime_error(
-            "Unterminated string starting on line " + std::to_string(startLine) + ".");
+            "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
+    }
+    if (peek() == '\'') {
+        throw std::runtime_error("Empty char literal on line " + std::to_string(startLine) + ".");
     }
 
-    advance();  // closing "
-
-    // Extract raw content (without surrounding quotes)
-    const std::string raw = source_.substr(start_ + 1, current_ - start_ - 2);
-
-    // Process escape sequences
-    std::string processed;
-    processed.reserve(raw.size());
-    for (std::size_t i = 0; i < raw.size(); ++i) {
-        if (raw[i] == '\\' && i + 1 < raw.size()) {
-            ++i;
-            switch (raw[i]) {
-                case 'n':  processed += '\n'; break;
-                case 't':  processed += '\t'; break;
-                case '\\': processed += '\\'; break;
-                case '"':  processed += '"';  break;
-                default:   processed += '\\'; processed += raw[i]; break;
-            }
-        } else {
-            processed += raw[i];
+    char value = '\0';
+    if (peek() == '\\') {
+        advance();
+        if (isAtEnd() || peek() == '\n') {
+            throw std::runtime_error(
+                "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
         }
+        value = decodeEscape(advance(), startLine, "char literal");
+    } else {
+        value = advance();
     }
 
-    const std::string lexeme = source_.substr(start_, current_ - start_);
-    tokens_.push_back(Token{TokenType::String, lexeme, startLine, std::nullopt, false, processed});
+    if (peek() != '\'') {
+        if (isAtEnd() || peek() == '\n') {
+            throw std::runtime_error(
+                "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
+        }
+        throw std::runtime_error(
+            "Char literal must contain exactly one character on line " + std::to_string(startLine) + ".");
+    }
+
+    advance();
+    tokens_.push_back(
+        Token{TokenType::Character, source_.substr(start_, current_ - start_), startLine,
+              std::nullopt, std::nullopt, value});
 }
 
 void Lexer::identifier() {
