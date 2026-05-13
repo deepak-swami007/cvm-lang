@@ -38,9 +38,15 @@ char decodeEscape(char escaped, std::size_t line, std::string_view context) {
         case 'n': return '\n';
         case 't': return '\t';
         case 'r': return '\r';
+        case 'v': return '\v';
+        case 'b': return '\b';
+        case 'f': return '\f';
+        case 'a': return '\a';
         case '0': return '\0';
         case '\\': return '\\';
         case '\'': return '\'';
+        case '"': return '\"';
+        case '?': return '\?';
         default:
             throw std::runtime_error(
                 "Invalid escape sequence '\\" + std::string(1, escaped) + "' in " + std::string(context) +
@@ -153,7 +159,8 @@ void Lexer::scanToken() {
             }
             break;
         case '\'':
-            scanCharacter();
+        case '"':
+            scanCharacter(c);
             break;
         case ' ':
         case '\r':
@@ -219,13 +226,13 @@ void Lexer::number() {
     }
 }
 
-void Lexer::scanCharacter() {
+void Lexer::scanCharacter(char quote) {
     const std::size_t startLine = line_;
     if (isAtEnd() || peek() == '\n') {
         throw std::runtime_error(
             "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
     }
-    if (peek() == '\'') {
+    if (peek() == quote) {
         throw std::runtime_error("Empty char literal on line " + std::to_string(startLine) + ".");
     }
 
@@ -236,12 +243,33 @@ void Lexer::scanCharacter() {
             throw std::runtime_error(
                 "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
         }
-        value = decodeEscape(advance(), startLine, "char literal");
+        char escaped = advance();
+        if (escaped == 'x') { // Hex escape
+            std::string hexStr;
+            for (int i = 0; i < 2; ++i) {
+                if (isDigit(peek()) || (peek() >= 'a' && peek() <= 'f') || (peek() >= 'A' && peek() <= 'F')) {
+                    hexStr += advance();
+                } else break;
+            }
+            if (hexStr.empty()) throw std::runtime_error("Invalid hex escape sequence");
+            value = static_cast<char>(std::stoi(hexStr, nullptr, 16));
+        } else if (escaped >= '0' && escaped <= '7') { // Octal escape
+            std::string octStr;
+            octStr += escaped;
+            for (int i = 0; i < 2; ++i) {
+                if (peek() >= '0' && peek() <= '7') {
+                    octStr += advance();
+                } else break;
+            }
+            value = static_cast<char>(std::stoi(octStr, nullptr, 8));
+        } else {
+            value = decodeEscape(escaped, startLine, "char literal");
+        }
     } else {
         value = advance();
     }
 
-    if (peek() != '\'') {
+    if (peek() != quote) {
         if (isAtEnd() || peek() == '\n') {
             throw std::runtime_error(
                 "Unterminated char literal starting on line " + std::to_string(startLine) + ".");
