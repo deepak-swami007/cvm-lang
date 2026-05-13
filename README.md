@@ -102,15 +102,20 @@ CVM++ has robust runtime and compile-time error reporting, pinpointing exact lin
 ## Build & Run
 
 ### Prerequisites
-- C++20 compatible compiler (`clang++` or `g++`)
-- `make`
+- C++20 compatible compiler (`clang++`, `g++`, or `MSVC`)
+- `CMake` (version 3.10 or higher)
 
 ### Build
 ```bash
-make
+mkdir build
+cd build
+cmake ..
+cmake --build .
 ```
 
 ### Run
+From the root directory of the project:
+
 ```bash
 # Run the REPL or default example
 ./build/cvm
