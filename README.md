@@ -267,27 +267,7 @@ cvmpp/
 
 ---
 
-## 🤝 Contributing
 
-This is a student project, and contributions, feedback, and suggestions are genuinely welcome. If you find a bug, have a feature idea, or just want to discuss language design, open an issue.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add some feature'`)
-4. Push to your branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
-
-Please keep PRs focused — one feature or fix per PR makes review much easier.
-
----
-
-## 📄 License
-
-Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
-
-You're free to use, modify, and distribute this project. Attribution appreciated but not required.
-
----
 
 ## 🙏 Acknowledgments
 
@@ -295,7 +275,7 @@ This project was heavily inspired by the learning philosophy behind crafting int
 
 - [**Crafting Interpreters** by Robert Nystrom](https://craftinginterpreters.com/) — the gold standard for learning this stuff
 - The C++ standards committee — for giving us `std::variant` and `std::optional`, which made type dispatch actually bearable
-- Every Stack Overflow answer about register allocation that I read at 2am
+
 
 ---
 
@@ -303,7 +283,7 @@ This project was heavily inspired by the learning philosophy behind crafting int
 
 <br>
 
-**If this project helped you learn something, drop a ⭐ — it genuinely means a lot.**
+**If this project helped you learn something, drop a ⭐.**
 
 <br>
 
