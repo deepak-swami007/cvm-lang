@@ -1,111 +1,102 @@
-# CVM++ — A Custom Virtual Machine Language
+<div align="center">
 
-CVM++ is a fast, bytecode-compiled programming language with its own virtual machine, built completely from scratch in C++20. It implements a fully functioning compiler pipeline: **Lexer → Parser → AST → Compiler → VM**.
+# ⚡ CVM++
+**A High-Performance Custom Virtual Machine & Bytecode Compiler**
 
-## Features & Language Specification
+[![C++20](https://img.shields.io/badge/C++-20-blue.svg?style=for-the-badge&logo=c%2B%2B)](https://en.cppreference.com/w/cpp/compiler_support)
+[![CMake](https://img.shields.io/badge/CMake-3.10+-green.svg?style=for-the-badge&logo=cmake)](https://cmake.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-### 1. Data Types
-CVM++ features strict type checking with robust bounds handling for primitive types:
-- `int` — 32-bit signed integer
-- `long` — 64-bit signed integer
-- `float` — 32-bit floating point
-- `double` — 64-bit floating point
-- `bool` — Boolean logic (`true`, `false`)
-- `char` — Single-byte characters (`'A'`, `'\n'`)
-- `auto` — Type inference (figures out type based on value)
-- `nil` — Uninitialized or null state
+*An end-to-end language pipeline built from scratch with strict typing, robust memory safety, and lightning-fast execution.*
 
-> **Note:** The `let` keyword is fully supported as an alias for `auto` for legacy compatibility.
-
-### 2. Variables and Assignments
-Variables are block-scoped and require an initial type declaration.
-
-```cvm
-int count = 10;
-long big_number = 9999999999;
-float pi = 3.14;
-double precise_pi = 3.1415926535;
-bool flag = true;
-char letter = 'C';
-auto dynamic_val = 100;
-```
-
-### 3. Operators
-CVM++ supports a wide array of mathematical, relational, and bitwise operations:
-- **Arithmetic:** `+`, `-`, `*`, `/`, `%` (modulo), `^` (power)
-- **Bitwise (Integers only):** `&` (AND), `|` (OR), `~` (NOT)
-- **Unary:** `-` (negation), `!` (logical NOT)
-- **Relational:** `==`, `!=`, `<`, `<=`, `>`, `>=`
-- **Logical (Short-circuiting):** `&&` (AND), `||` (OR)
-- **Compound Assignment:** `+=`, `-=`, `*=`, `/=`
-
-### 4. Control Flow
-Standard programming constructs are natively supported:
-
-```cvm
-// If-Else Conditionals
-if (count == 10 && flag) {
-    print "Matched!";
-} else {
-    print "Not matched.";
-}
-
-// While Loops
-while (count > 0) {
-    count -= 1;
-    if (count == 5) continue; // Skip to next iteration
-}
-
-// For Loops
-for (int i = 0; i < 10; i += 1) {
-    if (i == 8) break; // Exit loop early
-    print i;
-}
-```
-
-### 5. Input and Output (I/O)
-- `print <expression>;` — Evaluates the expression and writes it to standard output.
-- `input <variable>;` — Prompts the user via standard input. Input is automatically validated against the variable's declared type.
-
-```cvm
-int age = 0;
-print "Enter your age: ";
-input age; // Ensures the user enters a valid integer
-```
-
-### 6. Comments
-Single line comments are supported using `//`.
+</div>
 
 ---
 
-## Safety & Error Handling
-
-CVM++ has robust runtime and compile-time error reporting, pinpointing exact line numbers.
-
-| Error Type | Description |
-|---|---|
-| `SyntaxError` / `LexerError` | Invalid syntax, missing semicolons, or unrecognized characters. |
-| `NameError` | Attempting to access an undefined variable. |
-| `TypeError` | Type mismatches, such as assigning a `bool` to an `int` without casting. |
-| `MathError` | Illegal math operations, such as modulo or division by zero. |
-| `OverflowError` | Exceeding numeric limits (e.g., `INT_MAX + 1` or `INT_MIN / -1`). |
-| `DeclarationError` | Trying to redeclare an existing variable in the same scope. |
-| `InputError` | User provides invalid console input for a statically typed variable. |
-
-**Example Error Output:**
-```
-[Line 14] TypeError: Cannot assign bool to int in assignment to variable 'x'.
-```
+## 📖 Table of Contents
+- [Philosophy](#-philosophy)
+- [Architecture](#-architecture)
+- [Language Specification](#-language-specification)
+  - [Type System](#type-system)
+  - [Operators & Operations](#operators--operations)
+  - [Control Flow](#control-flow)
+- [Safety & Error Handling](#-safety--error-handling)
+- [Getting Started](#-getting-started)
 
 ---
 
-## Build & Run
+## 🎯 Philosophy
+
+CVM++ was born out of a desire to build a complete, uncompromising language pipeline from the ground up. By circumventing existing interpreter frameworks and LLVM, CVM++ offers a pure look into compiler design. It enforces strict type safety at the bytecode level, prioritizing developer predictability and bounded execution over implicit magic. 
+
+---
+
+## 🏗 Architecture
+
+CVM++ processes source code through a heavily optimized, five-stage pipeline:
+
+1. **Lexical Analysis (Lexer):** Converts raw character streams into semantic tokens.
+2. **Parsing (Parser):** Assembles tokens into an Abstract Syntax Tree (AST) using a recursive descent algorithm.
+3. **AST Validation:** Enforces syntax rules and scoping constraints prior to compilation.
+4. **Bytecode Compilation (Compiler):** Translates the AST into flattened, highly optimized opcode sequences (Chunks).
+5. **Execution (Virtual Machine):** A stack-based execution engine that strictly manages primitive types, handles short-circuit evaluation, and executes the final bytecode.
+
+---
+
+## ⚡ Language Specification
+
+CVM++ is statically typed at the declaration level, with extensive support for dynamic inference during initialization. 
+
+### Type System
+The language supports a rich set of primitives, complete with hardware-level boundary checking:
+- **`int`** — 32-bit signed integer.
+- **`long`** — 64-bit signed integer.
+- **`float`** — 32-bit floating point.
+- **`double`** — 64-bit floating point.
+- **`bool`** — Boolean logic.
+- **`char`** — Single-byte characters.
+- **`auto` / `let`** — Runtime type inference based on assignment value.
+- **`nil`** — Safe uninitialized state representation.
+
+### Operators & Operations
+- **Mathematical:** Standard arithmetic, modulo, and exponentiation.
+- **Bitwise:** Low-level integer manipulation (AND, OR, NOT).
+- **Logical:** Short-circuiting boolean operations.
+- **Relational:** Comprehensive equality and magnitude comparisons.
+- **Assignment:** Standard and compound assignment operators for concise mutations.
+
+### Control Flow
+- **Conditionals:** Standard branching logic.
+- **Iterators:** Pre-condition loops and fully featured counter loops.
+- **Modifiers:** Mid-loop interruption and iteration skipping mechanisms.
+- **I/O Integration:** Native standard output streams and strictly typed standard input prompts.
+
+---
+
+## 🛡 Safety & Error Handling
+
+CVM++ doesn't just fail; it explains *why*. The VM includes deep runtime bounds checking to prevent hardware faults.
+
+- **Syntax & Lexer Analytics:** Catch malformed expressions instantly.
+- **Memory & Stack Protections:** Prevents stack underflows and bounds violations at the opcode level.
+- **Mathematical Boundaries:** Strict guards against division/modulo by zero.
+- **Overflow Guards:** Hardline protections against integer wraps and floating-point explosions.
+- **Type Coercion Guards:** Prevents unsafe implicit downcasts that result in precision loss.
+- **Input Validation:** Halts execution gracefully when standard input violates the declared variable type.
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- C++20 compatible compiler (`clang++`, `g++`, or `MSVC`)
-- `CMake` (version 3.10 or higher)
+To compile CVM++, ensure your environment meets the modern C++ standard:
+- **C++20** compatible compiler (`clang++`, `g++`, or `MSVC`).
+- **CMake** (version 3.10 or higher).
 
-### Build
+### Build Instructions
+
+Execute the following commands from the project root to compile the virtual machine:
+
 ```bash
 mkdir build
 cd build
@@ -113,36 +104,23 @@ cmake ..
 cmake --build .
 ```
 
-### Run
-From the root directory of the project:
+### Execution
+
+Launch the compiled binary to execute your scripts.
 
 ```bash
-# Run the REPL or default example
+# Run the Interactive REPL
 ./build/cvm
 
-# Run a specific script
-./build/cvm examples/example.cvm
+# Execute a Script File
+./build/cvm path/to/script.cvm
 
-# Limit VM execution steps (prevents infinite loops)
-./build/cvm --max-steps 10000 examples/example.cvm
+# Execute with Infinite-Loop Protections (Step Limits)
+./build/cvm --max-steps 10000 path/to/script.cvm
 ```
 
-## Architecture
+---
 
-CVM++ processes code in multiple phases. The VM is stack-based, executing specific custom opcodes.
-
-```text
-Source Code (.cvm)
-       │
-       ▼
-    [Lexer]         → Tokens (Keywords, Identifiers, Operators)
-       │
-       ▼
-    [Parser]        → AST (Abstract Syntax Tree)
-       │
-       ▼
-    [Compiler]      → Bytecode (Chunk with custom Opcodes)
-       │
-       ▼
-    [VM]            → Execution Output
-```
+<div align="center">
+<i>Built with precision and passion.</i>
+</div>
