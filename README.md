@@ -1,148 +1,298 @@
-# CVM++ — A Custom Virtual Machine Language
+<div align="center">
 
-CVM++ is a fast, bytecode-compiled programming language with its own virtual machine, built completely from scratch in C++20. It implements a fully functioning compiler pipeline: **Lexer → Parser → AST → Compiler → VM**.
+<br>
 
-## Features & Language Specification
-
-### 1. Data Types
-CVM++ features strict type checking with robust bounds handling for primitive types:
-- `int` — 32-bit signed integer
-- `long` — 64-bit signed integer
-- `float` — 32-bit floating point
-- `double` — 64-bit floating point
-- `bool` — Boolean logic (`true`, `false`)
-- `char` — Single-byte characters (`'A'`, `'\n'`)
-- `auto` — Type inference (figures out type based on value)
-- `nil` — Uninitialized or null state
-
-> **Note:** The `let` keyword is fully supported as an alias for `auto` for legacy compatibility.
-
-### 2. Variables and Assignments
-Variables are block-scoped and require an initial type declaration.
-
-```cvm
-int count = 10;
-long big_number = 9999999999;
-float pi = 3.14;
-double precise_pi = 3.1415926535;
-bool flag = true;
-char letter = 'C';
-auto dynamic_val = 100;
+```
+ ██████╗██╗   ██╗███╗   ███╗██╗  ██╗ ██╗
+██╔════╝██║   ██║████╗ ████║╚██╗██╔╝ ██║
+██║     ██║   ██║██╔████╔██║ ╚███╔╝  ██║
+██║     ╚██╗ ██╔╝██║╚██╔╝██║ ██╔██╗  ╚═╝
+╚██████╗ ╚████╔╝ ██║ ╚═╝ ██║██╔╝ ██╗ ██╗
+ ╚═════╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═╝
 ```
 
-### 3. Operators
-CVM++ supports a wide array of mathematical, relational, and bitwise operations:
-- **Arithmetic:** `+`, `-`, `*`, `/`, `%` (modulo), `^` (power)
-- **Bitwise (Integers only):** `&` (AND), `|` (OR), `~` (NOT)
-- **Unary:** `-` (negation), `!` (logical NOT)
-- **Relational:** `==`, `!=`, `<`, `<=`, `>`, `>=`
-- **Logical (Short-circuiting):** `&&` (AND), `||` (OR)
-- **Compound Assignment:** `+=`, `-=`, `*=`, `/=`
+### A High-Performance Custom Virtual Machine & Bytecode Compiler
 
-### 4. Control Flow
-Standard programming constructs are natively supported:
+*Built completely from scratch — no LLVM, no interpreter frameworks, no shortcuts.*
 
-```cvm
-// If-Else Conditionals
-if (count == 10 && flag) {
-    print "Matched!";
-} else {
-    print "Not matched.";
-}
+<br>
 
-// While Loops
-while (count > 0) {
-    count -= 1;
-    if (count == 5) continue; // Skip to next iteration
-}
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://en.cppreference.com/w/cpp/compiler_support/20)
+[![CMake](https://img.shields.io/badge/CMake-3.10+-064F8C?style=for-the-badge&logo=cmake&logoColor=white)](https://cmake.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-F7DF1E?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey?style=for-the-badge)]()
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)]()
 
-// For Loops
-for (int i = 0; i < 10; i += 1) {
-    if (i == 8) break; // Exit loop early
-    print i;
-}
-```
+<br>
 
-### 5. Input and Output (I/O)
-- `print <expression>;` — Evaluates the expression and writes it to standard output.
-- `input <variable>;` — Prompts the user via standard input. Input is automatically validated against the variable's declared type.
+> *"The best way to understand how programming languages work is to build one yourself."*
 
-```cvm
-int age = 0;
-print "Enter your age: ";
-input age; // Ensures the user enters a valid integer
-```
+<br>
 
-### 6. Comments
-Single line comments are supported using `//`.
+[What is CVM++](#-what-is-cvm) · [Architecture](#%EF%B8%8F-architecture) · [Language](#-language-specification) · [Safety](#-safety--error-handling) · [Getting Started](#-getting-started) · [Contributing](#-contributing)
+
+<br>
+
+</div>
 
 ---
 
-## Safety & Error Handling
+## 🤔 What is CVM++?
 
-CVM++ has robust runtime and compile-time error reporting, pinpointing exact line numbers.
+CVM++ is a **complete, end-to-end programming language implementation** — written in modern C++20. It takes source code you write, chews through it across five distinct stages, and executes it on a custom-built virtual machine.
 
-| Error Type | Description |
+No LLVM. No Flex/Bison. No shortcuts. Every single component — the lexer, the parser, the AST validator, the bytecode compiler, and the VM itself — was designed and built by hand.
+
+This project exists because the best way to truly understand how languages work under the hood isn't to read about them — it's to build one. CVM++ is the result of that obsession.
+
+**What makes it stand out:**
+
+- ⚡ **Stack-based VM** with a tightly optimized opcode dispatch loop
+- 🔒 **Strict static typing** with smart `auto`/`let` inference at declaration time
+- 🛡 **Deep runtime safety** — overflow guards, division-by-zero checks, type coercion protection, and more
+- 🧠 **Short-circuit evaluation** natively handled inside the VM
+- 📖 **Human-readable errors** — when things go wrong, you get a real explanation, not a cryptic crash
+
+---
+
+## 🏗️ Architecture
+
+CVM++ processes source code through a **five-stage pipeline**, where each stage has a single, well-defined responsibility. No stage knows too much about the others.
+
+```
+Source Code (.cvm)
+       │
+       ▼
+┌─────────────────┐
+│   LEXER         │  Raw characters → Semantic tokens
+│                 │  Handles keywords, literals, operators,
+│                 │  identifiers, and whitespace stripping
+└────────┬────────┘
+         │  Token Stream
+         ▼
+┌─────────────────┐
+│   PARSER        │  Tokens → Abstract Syntax Tree (AST)
+│                 │  Recursive descent — no parser generators,
+│                 │  written entirely by hand
+└────────┬────────┘
+         │  Raw AST
+         ▼
+┌─────────────────┐
+│  AST VALIDATOR  │  Enforces scoping rules, declaration
+│                 │  constraints, and syntactic legality
+│                 │  before a single byte of code is emitted
+└────────┬────────┘
+         │  Validated AST
+         ▼
+┌─────────────────┐
+│   COMPILER      │  AST → Flattened opcode sequences (Chunks)
+│                 │  Resolves variables, handles jumps,
+│                 │  and optimizes the output bytecode
+└────────┬────────┘
+         │  Bytecode (Chunks)
+         ▼
+┌─────────────────┐
+│ VIRTUAL MACHINE │  Executes bytecode on a stack-based engine
+│                 │  Manages types, handles I/O, enforces
+│                 │  all runtime safety guarantees
+└─────────────────┘
+         │
+         ▼
+    Program Output
+```
+
+Every stage fails fast and loudly. If your code is malformed, you'll know exactly where and why before it ever reaches the VM.
+
+---
+
+## ⚡ Language Specification
+
+CVM++ is **statically typed at declaration** with support for **runtime type inference** via `auto` and `let`. The language is intentionally minimal but expressive — everything is a deliberate design choice.
+
+---
+
+### Type System
+
+The type system maps directly to hardware primitives. There's no hidden boxing, no garbage-collected heap objects masquerading as values.
+
+| Type | Description | Bit Width |
+|------|-------------|-----------|
+| `int` | Signed integer | 32-bit |
+| `long` | Signed integer | 64-bit |
+| `float` | Floating point | 32-bit (IEEE 754) |
+| `double` | Floating point | 64-bit (IEEE 754) |
+| `bool` | Boolean | — |
+| `char` | Single character | 8-bit |
+| `auto` / `let` | Type inferred from assignment | — |
+| `nil` | Safe uninitialized state | — |
+
+> **No implicit lossy downcasts.** Assigning a `double` to an `int` without an explicit cast is a runtime error, not a silent truncation.
+
+---
+
+### Operators & Operations
+
+**Mathematical**
+Standard arithmetic (`+`, `-`, `*`, `/`), modulo (`%`), and exponentiation (`**`).
+
+**Bitwise**
+Low-level integer manipulation: AND (`&`), OR (`|`), NOT (`~`).
+
+**Logical**
+Boolean logic with proper short-circuit evaluation: `&&`, `||`, `!`.
+The VM halts evaluation of the right-hand operand whenever the result is already determined by the left — this is enforced at the bytecode level, not just at the AST level.
+
+**Relational**
+Full comparison suite: `==`, `!=`, `<`, `>`, `<=`, `>=`.
+
+**Assignment**
+Standard (`=`) and compound (`+=`, `-=`, `*=`, `/=`, `%=`) assignment operators for concise in-place mutation.
+
+---
+
+### Control Flow
+
+**Conditionals**
+Standard `if` / `else if` / `else` branching. Condition expressions are fully evaluated with type checking before any branch is taken.
+
+**Loops**
+- Pre-condition `while` loops — evaluate condition, enter body, repeat.
+- Counter-based `for` loops — full initializer, condition, and increment expressions.
+
+**Loop Modifiers**
+- `break` — immediately exits the enclosing loop.
+- `continue` — skips the remaining body of the current iteration and re-evaluates the condition.
+
+**I/O**
+- `print` — native standard output stream.
+- `input` — strictly typed standard input. If the user types a `string` when an `int` is expected, the VM halts gracefully with a descriptive error. No unchecked `scanf` behavior.
+
+---
+
+## 🛡 Safety & Error Handling
+
+CVM++ doesn't just crash. It tells you *what went wrong*, *where*, and *why*. Runtime safety is not an afterthought — it's baked into every layer of the pipeline.
+
+### Compile-Time Protections
+
+| Check | What It Catches |
 |---|---|
-| `SyntaxError` / `LexerError` | Invalid syntax, missing semicolons, or unrecognized characters. |
-| `NameError` | Attempting to access an undefined variable. |
-| `TypeError` | Type mismatches, such as assigning a `bool` to an `int` without casting. |
-| `MathError` | Illegal math operations, such as modulo or division by zero. |
-| `OverflowError` | Exceeding numeric limits (e.g., `INT_MAX + 1` or `INT_MIN / -1`). |
-| `DeclarationError` | Trying to redeclare an existing variable in the same scope. |
-| `InputError` | User provides invalid console input for a statically typed variable. |
+| **Lexer Analytics** | Malformed tokens, unterminated strings, illegal characters |
+| **Parser Validation** | Unexpected token sequences, malformed expressions |
+| **Scope Enforcement** | Undeclared variables, out-of-scope references |
+| **Type Coercion Guards** | Implicit narrowing conversions that would silently lose precision |
 
-**Example Error Output:**
-```
-[Line 14] TypeError: Cannot assign bool to int in assignment to variable 'x'.
-```
+### Runtime Protections
+
+| Check | What It Catches |
+|---|---|
+| **Stack Underflow Guard** | Pops on an empty stack — would be a silent segfault elsewhere |
+| **Bounds Violation Detection** | Out-of-range memory/stack access at the opcode level |
+| **Division / Modulo by Zero** | Strict pre-check before every `/` and `%` operation |
+| **Integer Overflow Guard** | Wrapping arithmetic that would silently corrupt values |
+| **Float Explosion Guard** | Detects `Inf` and `NaN` results before they propagate |
+| **Input Type Mismatch** | Halts when stdin input violates the declared variable's type |
+
+> There is no concept of "undefined behavior" hiding in the VM. Every exceptional condition has an explicit check and a human-readable error message.
 
 ---
 
-## Build & Run
+## 🚀 Getting Started
 
 ### Prerequisites
-- C++20 compatible compiler (`clang++`, `g++`, or `MSVC`)
-- `CMake` (version 3.10 or higher)
 
-### Build
+| Requirement | Version |
+|---|---|
+| C++ Compiler (`g++`, `clang++`, or MSVC) | C++20 support required |
+| CMake | 3.10 or higher |
+
+Verify your compiler supports C++20:
 ```bash
+g++ --version        # GCC 10+ for full C++20
+clang++ --version    # Clang 10+ for full C++20
+```
+
+---
+
+### Building
+
+Clone the repository and build with CMake:
+
+```bash
+git clone https://github.com/yourusername/cvmpp.git
+cd cvmpp
+
 mkdir build
 cd build
 cmake ..
 cmake --build .
 ```
 
-### Run
-From the root directory of the project:
+The compiled binary will be located at `./build/cvm`.
+
+---
+
+### Running CVM++
 
 ```bash
-# Run the REPL or default example
+# Launch the interactive REPL (great for quick tests)
 ./build/cvm
 
-# Run a specific script
-./build/cvm examples/example.cvm
+# Execute a .cvm script file
+./build/cvm path/to/your/script.cvm
 
-# Limit VM execution steps (prevents infinite loops)
-./build/cvm --max-steps 10000 examples/example.cvm
+# Execute with a step limit (protects against infinite loops)
+./build/cvm --max-steps 10000 path/to/your/script.cvm
 ```
 
-## Architecture
+> **Tip:** Use `--max-steps` during development to catch accidental infinite loops early. The VM will halt and report how many steps were executed before the limit was hit.
 
-CVM++ processes code in multiple phases. The VM is stack-based, executing specific custom opcodes.
+---
 
-```text
-Source Code (.cvm)
-       │
-       ▼
-    [Lexer]         → Tokens (Keywords, Identifiers, Operators)
-       │
-       ▼
-    [Parser]        → AST (Abstract Syntax Tree)
-       │
-       ▼
-    [Compiler]      → Bytecode (Chunk with custom Opcodes)
-       │
-       ▼
-    [VM]            → Execution Output
+### Project Structure
+
 ```
+cvmpp/
+├── src/
+│   ├── lexer/          # Tokenization stage
+│   ├── parser/         # AST construction (recursive descent)
+│   ├── validator/      # AST scoping & syntax rules
+│   ├── compiler/       # Bytecode emission (Chunks)
+│   └── vm/             # Stack-based execution engine
+├── include/            # Shared headers
+├── scripts/            # Utility & test scripts
+├── CMakeLists.txt
+└── README.md
+```
+
+---
+
+
+
+## 🙏 Acknowledgments
+
+This project was heavily inspired by the learning philosophy behind crafting interpreters from the ground up. Special thanks to:
+
+- [**Crafting Interpreters** by Robert Nystrom](https://craftinginterpreters.com/) — the gold standard for learning this stuff
+- The C++ standards committee — for giving us `std::variant` and `std::optional`, which made type dispatch actually bearable
+
+
+---
+
+<div align="center">
+
+<br>
+
+**If this project helped you learn something, drop a ⭐.**
+
+<br>
+
+*Built with stubbornness, coffee, and an unreasonable amount of passion for how computers actually work.*
+
+<br>
+
+[![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/made-with-c-plus-plus.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/works-on-my-machine.svg)](https://forthebadge.com)
+
+</div>

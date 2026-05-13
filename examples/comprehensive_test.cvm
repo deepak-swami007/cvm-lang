@@ -1,0 +1,143 @@
+// ============================================================================
+// CVM++ Comprehensive Edge Case & Feature Test
+// ============================================================================
+
+print "--- Starting CVM++ Comprehensive Test ---";
+
+// ---------------------------------------------------------
+// 1. DATA TYPES AND INFERENCE
+// ---------------------------------------------------------
+print "1. Testing Data Types...";
+int a = 2147483647;             // Max 32-bit int
+long b = 9223372036854775807;   // Max 64-bit int (Long)
+float c = 3.14159;
+double d = 2.718281828459045;
+bool e = true;
+char f = 'A';
+auto g = 42;
+let h = false;                  // Legacy keyword compatibility
+
+print a;
+print b;
+print c;
+print e;
+print f;
+
+// ---------------------------------------------------------
+// 2. ARITHMETIC AND COERCION
+// ---------------------------------------------------------
+print "2. Testing Arithmetic & Coercion...";
+
+// Implicit coercion test (int + float)
+auto mathResult = a + c; 
+print mathResult;
+
+// Modulo and Power
+int modResult = 100 % 3;
+double powResult = 2.0 ^ 8.0; 
+print modResult; // Expect 1
+print powResult; // Expect 256
+
+// ---------------------------------------------------------
+// 3. BITWISE OPERATIONS (Integers Only)
+// ---------------------------------------------------------
+print "3. Testing Bitwise Operations...";
+int bitAnd = 12 & 10;   // 1100 & 1010 = 1000 (8)
+int bitOr = 12 | 10;    // 1100 | 1010 = 1110 (14)
+int bitNot = ~5;        // ~00000101 = 11111010 (-6 in two's complement)
+print bitAnd;
+print bitOr;
+print bitNot;
+
+// ---------------------------------------------------------
+// 4. LOGICAL SHORT-CIRCUITING
+// ---------------------------------------------------------
+print "4. Testing Logical Short-Circuit...";
+bool shortCircuitTest = false;
+
+// The right side of || should NOT execute because true is met
+if (true || (shortCircuitTest = true)) {
+    print "OR Short-circuit evaluated properly!";
+}
+// shortCircuitTest should still be false
+print shortCircuitTest; 
+
+// The right side of && should NOT execute because false is met
+if (false && (shortCircuitTest = true)) {
+    print "Should not print";
+}
+// shortCircuitTest should still be false
+print shortCircuitTest;
+
+// ---------------------------------------------------------
+// 5. COMPOUND ASSIGNMENTS
+// ---------------------------------------------------------
+print "5. Testing Compound Assignments...";
+int counter = 10;
+counter += 5;   // 15
+counter -= 2;   // 13
+counter *= 2;   // 26
+counter /= 2;   // 13
+print counter;
+
+// ---------------------------------------------------------
+// 6. CONTROL FLOW (For, While, Break, Continue)
+// ---------------------------------------------------------
+print "6. Testing Control Flow...";
+
+int loopSum = 0;
+// Note: loop increment using compound assignment
+for (int i = 0; i < 10; i += 1) {
+    if (i == 3) {
+        continue; // Skip 3 entirely
+    }
+    if (i == 8) {
+        break;    // Halt execution at 8
+    }
+    loopSum += i;
+}
+// Sum of 0, 1, 2, 4, 5, 6, 7 = 25
+print loopSum;
+
+int whileCounter = 5;
+while (whileCounter > 0) {
+    whileCounter -= 1;
+}
+print whileCounter; // Expect 0
+
+// ---------------------------------------------------------
+// 7. BOUNDARY & ERROR EDGE CASES
+// ---------------------------------------------------------
+print "7. Testing Boundaries...";
+
+// The following operations are deliberately commented out 
+// because they will successfully trigger the VM's strict hardware 
+// and type guards, halting execution immediately if run:
+
+// -- 7a. Division / Modulo by Zero --
+// int crash_div = 10 / 0;       // MathError: Division by zero.
+// int crash_mod = 10 % 0;       // MathError: Modulo by zero.
+
+// -- 7b. Hardware Overflow Guards --
+// int crash_add = 2147483647 + 1; // OverflowError: Integer overflow in addition.
+// int crash_neg = -2147483648 / -1; // OverflowError: Integer overflow in division (INT_MIN / -1).
+
+// -- 7c. Strict Type Guards --
+// bool crash_type = 10;         // TypeError: Cannot assign int to bool.
+// char crash_char = 300;        // TypeError: Value is out of char range.
+
+// -- 7d. Variable Redeclaration --
+// int a = 50;                   // DeclarationError: Variable 'a' is already defined.
+
+print "--- CVM++ Test Suite Completed Successfully ---";
+
+// ---------------------------------------------------------
+// 8. I/O TESTING
+// ---------------------------------------------------------
+// (Uncomment the lines below to test typed runtime standard input)
+// 
+// int user_age = 0;
+// print "Enter an integer to test standard input: ";
+// input user_age;
+// print "You entered:";
+// print user_age;
