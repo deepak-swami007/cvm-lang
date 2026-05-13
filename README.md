@@ -3,12 +3,12 @@
 <br>
 
 ```
- ██████╗██╗   ██╗███╗   ███╗██╗  ██╗ ██╗
-██╔════╝██║   ██║████╗ ████║╚██╗██╔╝ ██║
-██║     ██║   ██║██╔████╔██║ ╚███╔╝  ██║
-██║     ╚██╗ ██╔╝██║╚██╔╝██║ ██╔██╗  ╚═╝
-╚██████╗ ╚████╔╝ ██║ ╚═╝ ██║██╔╝ ██╗ ██╗
- ╚═════╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═╝
+███████╗████████╗ █████╗  ██████╗██╗  ██╗    ██╗   ██╗███╗   ███╗
+██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝    ██║   ██║████╗ ████║
+███████╗   ██║   ███████║██║     █████╔╝     ██║   ██║██╔████╔██║
+╚════██║   ██║   ██╔══██║██║     ██╔═██╗     ╚██╗ ██╔╝██║╚██╔╝██║
+███████║   ██║   ██║  ██║╚██████╗██║  ██╗     ╚████╔╝ ██║ ╚═╝ ██║
+╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝     ╚═══╝  ╚═╝     ╚═╝
 ```
 
 ### A High-Performance Custom Virtual Machine & Bytecode Compiler
@@ -29,7 +29,7 @@
 
 <br>
 
-[What is CVM++](#-what-is-cvm) · [Architecture](#%EF%B8%8F-architecture) · [Language](#-language-specification) · [Safety](#-safety--error-handling) · [Getting Started](#-getting-started) · [Contributing](#-contributing)
+[What is CVM++](#-what-is-cvm) · [Architecture](#%EF%B8%8F-architecture) · [Language](#-language-specification) · [Safety](#-safety--error-handling) · [Getting Started](#-getting-started)
 
 <br>
 
