@@ -135,10 +135,15 @@ char parseCharInput(std::string_view rawInput, const std::string& context) {
             case 'n': return '\n';
             case 't': return '\t';
             case 'r': return '\r';
+            case 'v': return '\v';
+            case 'b': return '\b';
+            case 'f': return '\f';
+            case 'a': return '\a';
             case '0': return '\0';
             case '\\': return '\\';
             case '\'': return '\'';
-            case '"': return '"';
+            case '"': return '\"';
+            case '?': return '\?';
             default:
                 break;
         }
