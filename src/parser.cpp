@@ -1,5 +1,7 @@
 #include "cvm/parser.h"
 
+#include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -336,6 +338,10 @@ ExprPtr Parser::primary() {
     if (match({TokenType::Number})) {
         const Token& tok = previous();
         if (tok.integer.has_value()) {
+            if (*tok.integer >= std::numeric_limits<int32_t>::min() &&
+                *tok.integer <= std::numeric_limits<int32_t>::max()) {
+                return std::make_unique<Expr>(LiteralExpr{Value{static_cast<int32_t>(*tok.integer)}});
+            }
             return std::make_unique<Expr>(LiteralExpr{Value{*tok.integer}});
         }
         return std::make_unique<Expr>(LiteralExpr{Value{*tok.number}});
@@ -379,9 +385,7 @@ std::optional<DeclType> Parser::matchDeclarationType() {
         return DeclType::Int;
     }
     if (match({TokenType::Long})) {
-        // Support "long long" as two consecutive keywords
-        match({TokenType::Long});
-        return DeclType::Long;
+        return match({TokenType::Long}) ? DeclType::LongLong : DeclType::Long;
     }
     if (match({TokenType::Double})) {
         return DeclType::Double;

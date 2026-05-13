@@ -1,72 +1,118 @@
 # CVM++ — A Custom Virtual Machine Language
 
-CVM++ is a bytecode-compiled programming language with its own virtual machine, built from scratch in C++20. It features a complete pipeline: **Lexer → Parser → AST → Compiler → VM**.
+CVM++ is a fast, bytecode-compiled programming language with its own virtual machine, built completely from scratch in C++20. It implements a fully functioning compiler pipeline: **Lexer → Parser → AST → Compiler → VM**.
 
-## Features
+## Features & Language Specification
 
-- **Typed variables** — `int`, `long`, `double`, `float`, `bool`, `char`
-- **Auto variables** — `auto` (with legacy `let` still accepted for compatibility)
-- **Arithmetic** — `+`, `-`, `*`, `/` on numbers
-- **Comparisons** — `==`, `!=`, `<`, `<=`, `>`, `>=`
-- **Booleans & Nil** — `true`, `false`, `nil`
-- **Characters** — single-quoted literals like `'A'` and `'\n'`
-- **Unary operators** — `-` (negate), `!` (logical not)
-- **Control flow** — `if` / `else`, `while` loops
-- **Print** — `print <expression>;`
-- **Input** — `input <variable>;` (parses primitive values by declared type, or infers for `auto`)
-- **Comments** — `//` single-line comments
+### 1. Data Types
+CVM++ features strict type checking with robust bounds handling for primitive types:
+- `int` — 32-bit signed integer
+- `long` — 64-bit signed integer
+- `float` — 32-bit floating point
+- `double` — 64-bit floating point
+- `bool` — Boolean logic (`true`, `false`)
+- `char` — Single-byte characters (`'A'`, `'\n'`)
+- `auto` — Type inference (figures out type based on value)
+- `nil` — Uninitialized or null state
 
-## Language Syntax
+> **Note:** The `let` keyword is fully supported as an alias for `auto` for legacy compatibility.
 
+### 2. Variables and Assignments
+Variables are block-scoped and require an initial type declaration.
+
+```cvm
+int count = 10;
+long big_number = 9999999999;
+float pi = 3.14;
+double precise_pi = 3.1415926535;
+bool flag = true;
+char letter = 'C';
+auto dynamic_val = 100;
 ```
-// Variable declaration
-int x = 10;
-long total = 0;
-char initial = 'C';
-bool enabled = true;
-auto inferred = 5.5;
 
-// Input from user
-input x;
-input initial;
+### 3. Operators
+CVM++ supports a wide array of mathematical, relational, and bitwise operations:
+- **Arithmetic:** `+`, `-`, `*`, `/`, `%` (modulo), `^` (power)
+- **Bitwise (Integers only):** `&` (AND), `|` (OR), `~` (NOT)
+- **Unary:** `-` (negation), `!` (logical NOT)
+- **Relational:** `==`, `!=`, `<`, `<=`, `>`, `>=`
+- **Logical (Short-circuiting):** `&&` (AND), `||` (OR)
+- **Compound Assignment:** `+=`, `-=`, `*=`, `/=`
 
-// Print output
-print x;
-print initial;
+### 4. Control Flow
+Standard programming constructs are natively supported:
 
-// Arithmetic
-int result = (x + 5) * 2 - 1;
-
-// Conditionals
-if (x == 0) {
-    print 10;
+```cvm
+// If-Else Conditionals
+if (count == 10 && flag) {
+    print "Matched!";
 } else {
-    print 20;
+    print "Not matched.";
 }
 
-// Loops
-while (x < 100) {
-    x = x + 1;
+// While Loops
+while (count > 0) {
+    count -= 1;
+    if (count == 5) continue; // Skip to next iteration
+}
+
+// For Loops
+for (int i = 0; i < 10; i += 1) {
+    if (i == 8) break; // Exit loop early
+    print i;
 }
 ```
+
+### 5. Input and Output (I/O)
+- `print <expression>;` — Evaluates the expression and writes it to standard output.
+- `input <variable>;` — Prompts the user via standard input. Input is automatically validated against the variable's declared type.
+
+```cvm
+int age = 0;
+print "Enter your age: ";
+input age; // Ensures the user enters a valid integer
+```
+
+### 6. Comments
+Single line comments are supported using `//`.
+
+---
+
+## Safety & Error Handling
+
+CVM++ has robust runtime and compile-time error reporting, pinpointing exact line numbers.
+
+| Error Type | Description |
+|---|---|
+| `SyntaxError` / `LexerError` | Invalid syntax, missing semicolons, or unrecognized characters. |
+| `NameError` | Attempting to access an undefined variable. |
+| `TypeError` | Type mismatches, such as assigning a `bool` to an `int` without casting. |
+| `MathError` | Illegal math operations, such as modulo or division by zero. |
+| `OverflowError` | Exceeding numeric limits (e.g., `INT_MAX + 1` or `INT_MIN / -1`). |
+| `DeclarationError` | Trying to redeclare an existing variable in the same scope. |
+| `InputError` | User provides invalid console input for a statically typed variable. |
+
+**Example Error Output:**
+```
+[Line 14] TypeError: Cannot assign bool to int in assignment to variable 'x'.
+```
+
+---
 
 ## Build & Run
 
 ### Prerequisites
-
 - C++20 compatible compiler (`clang++` or `g++`)
 - `make`
 
 ### Build
-
 ```bash
 make
 ```
 
 ### Run
-
 ```bash
-# Run the default example
+# Run the REPL or default example
 ./build/cvm
 
 # Run a specific script
@@ -76,67 +122,22 @@ make
 ./build/cvm --max-steps 10000 examples/example.cvm
 ```
 
-## Error Reporting
-
-CVM++ provides clear error messages with line numbers and error types:
-
-| Error Type | Example |
-|---|---|
-| `SyntaxError` | Missing semicolons, unexpected tokens |
-| `LexerError` | Unexpected characters |
-| `NameError` | Undefined variables |
-| `TypeError` | Wrong operand types |
-| `MathError` | Division by zero |
-| `DeclarationError` | Duplicate variable declarations |
-| `InputError` | Invalid primitive input |
-| `StackError` | VM stack underflow |
-| `OverflowError` | Integer or floating-point overflow |
-
-Example error output:
-```
-[Line 5] NameError: Undefined variable 'z' on line 5.
-```
-
-## Project Structure
-
-```
-CVM++/
-├── include/cvm/
-│   ├── token.h        # Token types and formatting
-│   ├── lexer.h        # Lexer (tokenizer) interface
-│   ├── ast.h          # AST node definitions
-│   ├── parser.h       # Parser interface
-│   ├── value.h        # Runtime value types (number, bool, char, nil)
-│   ├── bytecode.h     # Opcodes, Chunk, and disassembler
-│   ├── compiler.h     # Compiler interface
-│   └── vm.h           # Virtual machine interface
-├── src/
-│   ├── main.cpp       # Entry point and CLI
-│   ├── lexer.cpp      # Lexer implementation
-│   ├── parser.cpp     # Recursive descent parser
-│   ├── compiler.cpp   # AST → bytecode compiler
-│   └── vm.cpp         # Stack-based VM executor
-├── examples/
-│   └── example.cvm    # Example CVM script
-└── Makefile
-```
-
 ## Architecture
 
-```
+CVM++ processes code in multiple phases. The VM is stack-based, executing specific custom opcodes.
+
+```text
 Source Code (.cvm)
        │
        ▼
-    [Lexer]         → Tokens
+    [Lexer]         → Tokens (Keywords, Identifiers, Operators)
        │
        ▼
     [Parser]        → AST (Abstract Syntax Tree)
        │
        ▼
-    [Compiler]      → Bytecode (Chunk with opcodes)
+    [Compiler]      → Bytecode (Chunk with custom Opcodes)
        │
        ▼
-    [VM]            → Execution output
+    [VM]            → Execution Output
 ```
-
-The VM is stack-based, using opcodes like `OP_CONSTANT`, `OP_ADD`, `OP_PRINT`, `OP_INPUT`, `OP_JUMP`, etc.

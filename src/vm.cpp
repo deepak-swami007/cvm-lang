@@ -9,10 +9,6 @@
 
 namespace cvm {
 
-// ── Helper: type-aware binary arithmetic ────────────────────────────
-// If both operands are int64_t, do integer math (with overflow check).
-// If either is double, promote both to double.
-
 namespace {
 
 double ensureFiniteDouble(double value, std::string_view context) {
@@ -20,6 +16,60 @@ double ensureFiniteDouble(double value, std::string_view context) {
         throw std::runtime_error("Floating-point overflow in " + std::string(context) + ".");
     }
     return value;
+}
+
+float ensureFiniteFloat(float value, std::string_view context) {
+    if (!std::isfinite(value)) {
+        throw std::runtime_error("Floating-point overflow in " + std::string(context) + ".");
+    }
+    return value;
+}
+
+bool fitsInInt32(int64_t value) {
+    return value >= std::numeric_limits<int32_t>::min() &&
+           value <= std::numeric_limits<int32_t>::max();
+}
+
+bool fitsInLong(int64_t value) {
+    return value >= static_cast<int64_t>(std::numeric_limits<long>::lowest()) &&
+           value <= static_cast<int64_t>(std::numeric_limits<long>::max());
+}
+
+bool fitsInUnsignedChar(int64_t value) {
+    return value >= 0 && value <= std::numeric_limits<unsigned char>::max();
+}
+
+enum class NumericKind {
+    Int32,
+    Int64,
+    Float,
+    Double,
+};
+
+NumericKind commonNumericKind(const Value& left, const Value& right) {
+    if (isDouble(left) || isDouble(right)) return NumericKind::Double;
+    if (isFloat(left) || isFloat(right)) return NumericKind::Float;
+    if (isLongLong(left) || isLongLong(right)) return NumericKind::Int64;
+    return NumericKind::Int32;
+}
+
+Value makeInt32Value(int64_t value, std::string_view context) {
+    if (!fitsInInt32(value)) {
+        throw std::runtime_error("Integer overflow in " + std::string(context) + ".");
+    }
+    return Value{static_cast<int32_t>(value)};
+}
+
+Value makeFloatValue(long double value, std::string_view context) {
+    const float converted = static_cast<float>(value);
+    if (!std::isfinite(converted)) {
+        throw std::runtime_error("Floating-point overflow in " + std::string(context) + ".");
+    }
+    return Value{converted};
+}
+
+Value makeDoubleValue(long double value, std::string_view context) {
+    return Value{ensureFiniteDouble(static_cast<double>(value), context)};
 }
 
 std::string trimCopy(std::string_view text) {
@@ -111,7 +161,11 @@ Value inferInputValue(const std::string& rawInput) {
     }
 
     try {
-        return Value{parseIntegerStrict(trimmed, "auto input")};
+        const int64_t integerValue = parseIntegerStrict(trimmed, "auto input");
+        if (fitsInInt32(integerValue)) {
+            return Value{static_cast<int32_t>(integerValue)};
+        }
+        return Value{integerValue};
     } catch (const std::exception&) {
     }
 
@@ -135,22 +189,52 @@ Value coerceValueToDeclType(const Value& value, DeclType declType, const std::st
     switch (declType) {
         case DeclType::Auto:
             return value;
-        case DeclType::Int:
-        case DeclType::Long:
+        case DeclType::Int: {
             if (!isNumber(value)) {
                 throw std::runtime_error(
-                    "Cannot assign " + valueTypeName(value) + " to " + std::string(declTypeName(declType)) +
-                    " in " + context + ".");
+                    "Cannot assign " + valueTypeName(value) + " to int in " + context + ".");
+            }
+            const int64_t converted = toInt64(value);
+            if (!fitsInInt32(converted)) {
+                throw std::runtime_error("Cannot assign " + valueTypeName(value) + " to int in " + context +
+                                         ": value is out of int range.");
+            }
+            return Value{static_cast<int32_t>(converted)};
+        }
+        case DeclType::Long: {
+            if (!isNumber(value)) {
+                throw std::runtime_error(
+                    "Cannot assign " + valueTypeName(value) + " to long in " + context + ".");
+            }
+            const int64_t converted = toInt64(value);
+            if (!fitsInLong(converted)) {
+                throw std::runtime_error("Cannot assign " + valueTypeName(value) + " to long in " + context +
+                                         ": value is out of long range.");
+            }
+            if constexpr (sizeof(long) <= sizeof(int32_t)) {
+                return Value{static_cast<int32_t>(converted)};
+            } else {
+                return Value{converted};
+            }
+        }
+        case DeclType::LongLong:
+            if (!isNumber(value)) {
+                throw std::runtime_error(
+                    "Cannot assign " + valueTypeName(value) + " to long long in " + context + ".");
             }
             return Value{toInt64(value)};
         case DeclType::Double:
+            if (!isNumber(value)) {
+                throw std::runtime_error(
+                    "Cannot assign " + valueTypeName(value) + " to double in " + context + ".");
+            }
+            return Value{ensureFiniteDouble(toDouble(value), context)};
         case DeclType::Float:
             if (!isNumber(value)) {
                 throw std::runtime_error(
-                    "Cannot assign " + valueTypeName(value) + " to " + std::string(declTypeName(declType)) +
-                    " in " + context + ".");
+                    "Cannot assign " + valueTypeName(value) + " to float in " + context + ".");
             }
-            return Value{ensureFiniteDouble(toDouble(value), context)};
+            return Value{ensureFiniteFloat(static_cast<float>(toDouble(value)), context)};
         case DeclType::Bool:
             if (!isBoolean(value)) {
                 throw std::runtime_error("Cannot assign " + valueTypeName(value) + " to bool in " + context + ".");
@@ -165,7 +249,7 @@ Value coerceValueToDeclType(const Value& value, DeclType declType, const std::st
             }
             {
                 const int64_t converted = toInt64(value);
-                if (converted < 0 || converted > 255) {
+                if (!fitsInUnsignedChar(converted)) {
                     throw std::runtime_error("Cannot assign " + valueTypeName(value) + " to char in " + context +
                                              ": value is out of char range.");
                 }
@@ -183,11 +267,17 @@ Value parseInputValue(const std::string& rawInput, DeclType declType, const std:
         case DeclType::Auto:
             return inferInputValue(rawInput);
         case DeclType::Int:
+            return coerceValueToDeclType(Value{static_cast<int64_t>(parseIntegerStrict(trimmed, context))},
+                                         DeclType::Int, context);
         case DeclType::Long:
-            return Value{parseIntegerStrict(trimmed, context)};
+            return coerceValueToDeclType(Value{static_cast<int64_t>(parseIntegerStrict(trimmed, context))},
+                                         DeclType::Long, context);
+        case DeclType::LongLong:
+            return Value{static_cast<int64_t>(parseIntegerStrict(trimmed, context))};
         case DeclType::Double:
-        case DeclType::Float:
             return Value{parseDoubleStrict(trimmed, context)};
+        case DeclType::Float:
+            return coerceValueToDeclType(Value{parseDoubleStrict(trimmed, context)}, DeclType::Float, context);
         case DeclType::Bool:
             if (trimmed == "true" || trimmed == "1") {
                 return Value{true};
@@ -206,70 +296,158 @@ Value parseInputValue(const std::string& rawInput, DeclType declType, const std:
 }  // namespace
 
 static Value numericAdd(const Value& left, const Value& right) {
-    if (isIntegral(left) && isIntegral(right)) {
-        const int64_t a = toInt64(left);
-        const int64_t b = toInt64(right);
-        if (addOverflows(a, b))
-            throw std::runtime_error("Integer overflow in addition (" +
-                std::to_string(a) + " + " + std::to_string(b) + ").");
-        return Value{a + b};
+    switch (commonNumericKind(left, right)) {
+        case NumericKind::Int32: {
+            const int32_t a = static_cast<int32_t>(toInt64(left));
+            const int32_t b = static_cast<int32_t>(toInt64(right));
+            if (addOverflows(a, b)) {
+                throw std::runtime_error("Integer overflow in addition (" +
+                                         std::to_string(a) + " + " + std::to_string(b) + ").");
+            }
+            return Value{static_cast<int32_t>(a + b)};
+        }
+        case NumericKind::Int64: {
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
+            if (addOverflows(a, b)) {
+                throw std::runtime_error("Integer overflow in addition (" +
+                                         std::to_string(a) + " + " + std::to_string(b) + ").");
+            }
+            return Value{a + b};
+        }
+        case NumericKind::Float:
+            return makeFloatValue(toLongDouble(left) + toLongDouble(right), "addition");
+        case NumericKind::Double:
+            return makeDoubleValue(toLongDouble(left) + toLongDouble(right), "addition");
     }
-    return Value{ensureFiniteDouble(toDouble(left) + toDouble(right), "addition")};
+
+    throw std::runtime_error("Internal addition error.");
 }
 
 static Value numericSub(const Value& left, const Value& right) {
-    if (isIntegral(left) && isIntegral(right)) {
-        const int64_t a = toInt64(left);
-        const int64_t b = toInt64(right);
-        if (subOverflows(a, b))
-            throw std::runtime_error("Integer overflow in subtraction (" +
-                std::to_string(a) + " - " + std::to_string(b) + ").");
-        return Value{a - b};
+    switch (commonNumericKind(left, right)) {
+        case NumericKind::Int32: {
+            const int32_t a = static_cast<int32_t>(toInt64(left));
+            const int32_t b = static_cast<int32_t>(toInt64(right));
+            if (subOverflows(a, b)) {
+                throw std::runtime_error("Integer overflow in subtraction (" +
+                                         std::to_string(a) + " - " + std::to_string(b) + ").");
+            }
+            return Value{static_cast<int32_t>(a - b)};
+        }
+        case NumericKind::Int64: {
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
+            if (subOverflows(a, b)) {
+                throw std::runtime_error("Integer overflow in subtraction (" +
+                                         std::to_string(a) + " - " + std::to_string(b) + ").");
+            }
+            return Value{a - b};
+        }
+        case NumericKind::Float:
+            return makeFloatValue(toLongDouble(left) - toLongDouble(right), "subtraction");
+        case NumericKind::Double:
+            return makeDoubleValue(toLongDouble(left) - toLongDouble(right), "subtraction");
     }
-    return Value{ensureFiniteDouble(toDouble(left) - toDouble(right), "subtraction")};
+
+    throw std::runtime_error("Internal subtraction error.");
 }
 
 static Value numericMul(const Value& left, const Value& right) {
-    if (isIntegral(left) && isIntegral(right)) {
-        const int64_t a = toInt64(left);
-        const int64_t b = toInt64(right);
-        if (mulOverflows(a, b))
-            throw std::runtime_error("Integer overflow in multiplication (" +
-                std::to_string(a) + " * " + std::to_string(b) + ").");
-        return Value{a * b};
+    switch (commonNumericKind(left, right)) {
+        case NumericKind::Int32: {
+            const int32_t a = static_cast<int32_t>(toInt64(left));
+            const int32_t b = static_cast<int32_t>(toInt64(right));
+            if (mulOverflows(a, b)) {
+                throw std::runtime_error("Integer overflow in multiplication (" +
+                                         std::to_string(a) + " * " + std::to_string(b) + ").");
+            }
+            return Value{static_cast<int32_t>(a * b)};
+        }
+        case NumericKind::Int64: {
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
+            if (mulOverflows(a, b)) {
+                throw std::runtime_error("Integer overflow in multiplication (" +
+                                         std::to_string(a) + " * " + std::to_string(b) + ").");
+            }
+            return Value{a * b};
+        }
+        case NumericKind::Float:
+            return makeFloatValue(toLongDouble(left) * toLongDouble(right), "multiplication");
+        case NumericKind::Double:
+            return makeDoubleValue(toLongDouble(left) * toLongDouble(right), "multiplication");
     }
-    return Value{ensureFiniteDouble(toDouble(left) * toDouble(right), "multiplication")};
+
+    throw std::runtime_error("Internal multiplication error.");
 }
 
 static Value numericDiv(const Value& left, const Value& right) {
-    if (isIntegral(left) && isIntegral(right)) {
-        const int64_t a = toInt64(left);
-        const int64_t b = toInt64(right);
-        if (b == 0) throw std::runtime_error("Division by zero.");
-        if (a == std::numeric_limits<int64_t>::min() && b == -1)
-            throw std::runtime_error("Integer overflow in division (INT_MIN / -1).");
-        return Value{a / b};
+    switch (commonNumericKind(left, right)) {
+        case NumericKind::Int32: {
+            const int32_t a = static_cast<int32_t>(toInt64(left));
+            const int32_t b = static_cast<int32_t>(toInt64(right));
+            if (b == 0) throw std::runtime_error("Division by zero.");
+            if (a == std::numeric_limits<int32_t>::min() && b == -1) {
+                throw std::runtime_error("Integer overflow in division (INT_MIN / -1).");
+            }
+            return Value{static_cast<int32_t>(a / b)};
+        }
+        case NumericKind::Int64: {
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
+            if (b == 0) throw std::runtime_error("Division by zero.");
+            if (a == std::numeric_limits<int64_t>::min() && b == -1) {
+                throw std::runtime_error("Integer overflow in division (INT_MIN / -1).");
+            }
+            return Value{a / b};
+        }
+        case NumericKind::Float: {
+            const float divisor = static_cast<float>(toDouble(right));
+            if (divisor == 0.0f) throw std::runtime_error("Division by zero.");
+            return makeFloatValue(toLongDouble(left) / toLongDouble(right), "division");
+        }
+        case NumericKind::Double: {
+            const double divisor = toDouble(right);
+            if (divisor == 0.0) throw std::runtime_error("Division by zero.");
+            return makeDoubleValue(toLongDouble(left) / toLongDouble(right), "division");
+        }
     }
-    double d = toDouble(right);
-    if (d == 0.0) throw std::runtime_error("Division by zero.");
-    return Value{ensureFiniteDouble(toDouble(left) / d, "division")};
+
+    throw std::runtime_error("Internal division error.");
 }
 
 static Value numericMod(const Value& left, const Value& right) {
-    if (isIntegral(left) && isIntegral(right)) {
-        const int64_t a = toInt64(left);
-        const int64_t b = toInt64(right);
-        if (b == 0) throw std::runtime_error("Modulo by zero.");
-        return Value{a % b};
+    switch (commonNumericKind(left, right)) {
+        case NumericKind::Int32: {
+            const int32_t a = static_cast<int32_t>(toInt64(left));
+            const int32_t b = static_cast<int32_t>(toInt64(right));
+            if (b == 0) throw std::runtime_error("Modulo by zero.");
+            return Value{static_cast<int32_t>(a % b)};
+        }
+        case NumericKind::Int64: {
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
+            if (b == 0) throw std::runtime_error("Modulo by zero.");
+            return Value{a % b};
+        }
+        case NumericKind::Float: {
+            const float divisor = static_cast<float>(toDouble(right));
+            if (divisor == 0.0f) throw std::runtime_error("Modulo by zero.");
+            return makeFloatValue(std::fmod(static_cast<float>(toDouble(left)), divisor), "modulo");
+        }
+        case NumericKind::Double: {
+            const double divisor = toDouble(right);
+            if (divisor == 0.0) throw std::runtime_error("Modulo by zero.");
+            return makeDoubleValue(std::fmod(toDouble(left), divisor), "modulo");
+        }
     }
-    double d = toDouble(right);
-    if (d == 0.0) throw std::runtime_error("Modulo by zero.");
-    return Value{ensureFiniteDouble(std::fmod(toDouble(left), d), "modulo")};
+
+    throw std::runtime_error("Internal modulo error.");
 }
 
 static Value numericPow(const Value& left, const Value& right) {
-    // Power always produces a double (like std::pow)
-    return Value{ensureFiniteDouble(std::pow(toDouble(left), toDouble(right)), "power")};
+    return makeDoubleValue(std::pow(toDouble(left), toDouble(right)), "power");
 }
 
 static void ensureNumber(const Value& value, const char* context) {
@@ -473,13 +651,24 @@ void VirtualMachine::run(const Chunk& chunk, std::ostream& out, const VMOptions&
             case OpCode::Negate: {
                 const Value operand = pop();
                 ensureNumber(operand, "operand of unary '-'");
-                if (isInteger(operand)) {
-                    int64_t v = std::get<int64_t>(operand);
-                    if (v == std::numeric_limits<int64_t>::min())
+                if (isInt(operand)) {
+                    const int32_t value = std::get<int32_t>(operand);
+                    if (value == std::numeric_limits<int32_t>::min()) {
                         throw std::runtime_error("Integer overflow in negation.");
-                    push(Value{-v});
+                    }
+                    push(Value{static_cast<int32_t>(-value)});
+                } else if (isLongLong(operand)) {
+                    const int64_t value = std::get<int64_t>(operand);
+                    if (value == std::numeric_limits<int64_t>::min()) {
+                        throw std::runtime_error("Integer overflow in negation.");
+                    }
+                    push(Value{-value});
+                } else if (isChar(operand)) {
+                    push(makeInt32Value(-toInt64(operand), "negation"));
+                } else if (isFloat(operand)) {
+                    push(Value{ensureFiniteFloat(-std::get<float>(operand), "negation")});
                 } else {
-                    push(Value{-std::get<double>(operand)});
+                    push(Value{ensureFiniteDouble(-std::get<double>(operand), "negation")});
                 }
                 break;
             }

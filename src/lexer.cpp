@@ -25,6 +25,7 @@ const std::unordered_map<std::string_view, TokenType> kKeywords = {
     {"break", TokenType::Break},
     {"continue", TokenType::Continue},
     {"int", TokenType::Int},
+    {"integer", TokenType::Int},
     {"long", TokenType::Long},
     {"double", TokenType::Double},
     {"float", TokenType::Float},
@@ -90,6 +91,20 @@ char Lexer::peekNext() const {
     }
     return source_[current_ + 1];
 }
+
+namespace {
+
+bool startsExponent(char current, char next) {
+    if (current != 'e' && current != 'E') {
+        return false;
+    }
+    if (Lexer::isDigit(next)) {
+        return true;
+    }
+    return (next == '+' || next == '-') && false;
+}
+
+}  // namespace
 
 void Lexer::addToken(TokenType type) {
     tokens_.push_back(Token{type, source_.substr(start_, current_ - start_), line_});
