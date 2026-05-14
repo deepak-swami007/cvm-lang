@@ -29,7 +29,7 @@
 
 <br>
 
-[What is CVM++](#-what-is-cvm) · [Architecture](#%EF%B8%8F-architecture) · [Language](#-language-specification) · [Safety](#-safety--error-handling) · [Getting Started](#-getting-started)
+[What is CVM++](#what-is-cvm) · [Architecture](#architecture) · [Language](#language-specification) · [Safety](#safety--error-handling) · [Getting Started](#getting-started)
 
 <br>
 
