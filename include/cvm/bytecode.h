@@ -50,16 +50,20 @@ enum class OpCode : std::uint8_t {
 class Chunk {
   public:
     std::vector<std::uint8_t> code;
+    std::vector<std::size_t> lines;
     std::vector<Value> constants;
     std::vector<std::string> names;
     std::vector<DeclType> nameTypes;
+    std::size_t currentLine = 1;
 
     void writeOp(OpCode op) {
         code.push_back(static_cast<std::uint8_t>(op));
+        lines.push_back(currentLine);
     }
 
     void writeByte(std::uint8_t byte) {
         code.push_back(byte);
+        lines.push_back(currentLine);
     }
 
     std::uint8_t addConstant(Value value) {
