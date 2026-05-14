@@ -89,6 +89,7 @@ void Compiler::emitStatement(const Stmt &stmt) {
           emitExpression(*node.expression);
           chunk_.writeOp(OpCode::Print);
         } else if constexpr (std::is_same_v<T, VarDeclStmt>) {
+          chunk_.currentLine = node.name.line;
           emitExpression(*node.initializer);
           chunk_.writeOp(OpCode::SetGlobal);
           chunk_.writeByte(chunk_.addName(node.name.lexeme, node.declType));
@@ -176,11 +177,13 @@ void Compiler::emitStatement(const Stmt &stmt) {
           }
 
         } else if constexpr (std::is_same_v<T, InputStmt>) {
+          chunk_.currentLine = node.name.line;
           ensureDeclaredGlobal(node.name);
           chunk_.writeOp(OpCode::Input);
           chunk_.writeByte(chunk_.addName(node.name.lexeme));
 
         } else if constexpr (std::is_same_v<T, BreakStmt>) {
+          chunk_.currentLine = node.keyword.line;
           if (loopStack_.empty()) {
             throw std::runtime_error(
                 "Cannot use 'break' outside of a loop on line " +
@@ -190,6 +193,7 @@ void Compiler::emitStatement(const Stmt &stmt) {
           loopStack_.back().breakJumps.push_back(breakJump);
 
         } else if constexpr (std::is_same_v<T, ContinueStmt>) {
+          chunk_.currentLine = node.keyword.line;
           if (loopStack_.empty()) {
             throw std::runtime_error(
                 "Cannot use 'continue' outside of a loop on line " +
@@ -230,6 +234,7 @@ void Compiler::emitExpression(const Expr &expr) {
           emitExpression(*node.expression);
         } else if constexpr (std::is_same_v<T, UnaryExpr>) {
           emitExpression(*node.right);
+          chunk_.currentLine = node.op.line;
           if (node.op.type == TokenType::Minus) {
             chunk_.writeOp(OpCode::Negate);
             return;
@@ -245,17 +250,20 @@ void Compiler::emitExpression(const Expr &expr) {
           throw std::runtime_error("Unsupported unary operator '" +
                                    node.op.lexeme + "'.");
         } else if constexpr (std::is_same_v<T, VariableExpr>) {
+          chunk_.currentLine = node.name.line;
           ensureDeclaredGlobal(node.name);
           chunk_.writeOp(OpCode::GetGlobal);
           chunk_.writeByte(chunk_.addName(node.name.lexeme));
         } else if constexpr (std::is_same_v<T, AssignExpr>) {
-          ensureDeclaredGlobal(node.name);
           emitExpression(*node.value);
+          chunk_.currentLine = node.name.line;
+          ensureDeclaredGlobal(node.name);
           chunk_.writeOp(OpCode::SetGlobal);
           chunk_.writeByte(chunk_.addName(node.name.lexeme));
 
         } else if constexpr (std::is_same_v<T, LogicalExpr>) {
           // Short-circuit evaluation
+          chunk_.currentLine = node.op.line;
           if (node.op.type == TokenType::AmpAmp) {
             // AND: if left is false, skip right
             emitExpression(*node.left);
@@ -277,6 +285,7 @@ void Compiler::emitExpression(const Expr &expr) {
         } else if constexpr (std::is_same_v<T, BinaryExpr>) {
           emitExpression(*node.left);
           emitExpression(*node.right);
+          chunk_.currentLine = node.op.line;
 
           switch (node.op.type) {
           case TokenType::BangEqual:

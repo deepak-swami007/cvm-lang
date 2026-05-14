@@ -201,8 +201,7 @@ Value coerceValueToDeclType(const Value& value, DeclType declType, const std::st
             }
             const int64_t converted = toInt64(value);
             if (!fitsInInt32(converted)) {
-                throw std::runtime_error("Cannot assign " + valueTypeName(value) + " to int in " + context +
-                                         ": value is out of int range.");
+                throw std::runtime_error("Integer overflow in " + context + ".");
             }
             return Value{static_cast<int32_t>(converted)};
         }
@@ -213,8 +212,7 @@ Value coerceValueToDeclType(const Value& value, DeclType declType, const std::st
             }
             const int64_t converted = toInt64(value);
             if (!fitsInLong(converted)) {
-                throw std::runtime_error("Cannot assign " + valueTypeName(value) + " to long in " + context +
-                                         ": value is out of long range.");
+                throw std::runtime_error("Integer overflow in " + context + ".");
             }
             if constexpr (sizeof(long) <= sizeof(int32_t)) {
                 return Value{static_cast<int32_t>(converted)};
@@ -255,8 +253,7 @@ Value coerceValueToDeclType(const Value& value, DeclType declType, const std::st
             {
                 const int64_t converted = toInt64(value);
                 if (!fitsInUnsignedChar(converted)) {
-                    throw std::runtime_error("Cannot assign " + valueTypeName(value) + " to char in " + context +
-                                             ": value is out of char range.");
+                    throw std::runtime_error("Integer overflow in " + context + ".");
                 }
                 return Value{static_cast<char>(static_cast<unsigned char>(converted))};
             }
@@ -303,13 +300,13 @@ Value parseInputValue(const std::string& rawInput, DeclType declType, const std:
 static Value numericAdd(const Value& left, const Value& right) {
     switch (commonNumericKind(left, right)) {
         case NumericKind::Int32: {
-            const int32_t a = static_cast<int32_t>(toInt64(left));
-            const int32_t b = static_cast<int32_t>(toInt64(right));
-            if (addOverflows(a, b)) {
-                throw std::runtime_error("Integer overflow in addition (" +
-                                         std::to_string(a) + " + " + std::to_string(b) + ").");
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
+            const int64_t result = a + b;
+            if (result < std::numeric_limits<int32_t>::min() || result > std::numeric_limits<int32_t>::max()) {
+                return Value{result};
             }
-            return Value{static_cast<int32_t>(a + b)};
+            return Value{static_cast<int32_t>(result)};
         }
         case NumericKind::Int64: {
             const int64_t a = toInt64(left);
@@ -332,13 +329,13 @@ static Value numericAdd(const Value& left, const Value& right) {
 static Value numericSub(const Value& left, const Value& right) {
     switch (commonNumericKind(left, right)) {
         case NumericKind::Int32: {
-            const int32_t a = static_cast<int32_t>(toInt64(left));
-            const int32_t b = static_cast<int32_t>(toInt64(right));
-            if (subOverflows(a, b)) {
-                throw std::runtime_error("Integer overflow in subtraction (" +
-                                         std::to_string(a) + " - " + std::to_string(b) + ").");
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
+            const int64_t result = a - b;
+            if (result < std::numeric_limits<int32_t>::min() || result > std::numeric_limits<int32_t>::max()) {
+                return Value{result};
             }
-            return Value{static_cast<int32_t>(a - b)};
+            return Value{static_cast<int32_t>(result)};
         }
         case NumericKind::Int64: {
             const int64_t a = toInt64(left);
@@ -361,13 +358,13 @@ static Value numericSub(const Value& left, const Value& right) {
 static Value numericMul(const Value& left, const Value& right) {
     switch (commonNumericKind(left, right)) {
         case NumericKind::Int32: {
-            const int32_t a = static_cast<int32_t>(toInt64(left));
-            const int32_t b = static_cast<int32_t>(toInt64(right));
-            if (mulOverflows(a, b)) {
-                throw std::runtime_error("Integer overflow in multiplication (" +
-                                         std::to_string(a) + " * " + std::to_string(b) + ").");
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
+            const int64_t result = a * b;
+            if (result < std::numeric_limits<int32_t>::min() || result > std::numeric_limits<int32_t>::max()) {
+                return Value{result};
             }
-            return Value{static_cast<int32_t>(a * b)};
+            return Value{static_cast<int32_t>(result)};
         }
         case NumericKind::Int64: {
             const int64_t a = toInt64(left);
@@ -390,11 +387,11 @@ static Value numericMul(const Value& left, const Value& right) {
 static Value numericDiv(const Value& left, const Value& right) {
     switch (commonNumericKind(left, right)) {
         case NumericKind::Int32: {
-            const int32_t a = static_cast<int32_t>(toInt64(left));
-            const int32_t b = static_cast<int32_t>(toInt64(right));
+            const int64_t a = toInt64(left);
+            const int64_t b = toInt64(right);
             if (b == 0) throw std::runtime_error("Division by zero.");
             if (a == std::numeric_limits<int32_t>::min() && b == -1) {
-                throw std::runtime_error("Integer overflow in division (INT_MIN / -1).");
+                return Value{static_cast<int64_t>(2147483648)};
             }
             return Value{static_cast<int32_t>(a / b)};
         }
@@ -484,10 +481,11 @@ void VirtualMachine::run(const Chunk& chunk, std::ostream& out, const VMOptions&
                 " instructions. Possible infinite loop. Increase --max-steps or use 0 to disable the limit.");
         }
 
-        const auto instruction = static_cast<OpCode>(readByte(chunk, ip, "opcode"));
-        ++executedInstructions;
+        try {
+            const auto instruction = static_cast<OpCode>(readByte(chunk, ip, "opcode"));
+            ++executedInstructions;
 
-        switch (instruction) {
+            switch (instruction) {
             case OpCode::Nil:
                 push(Value{std::monostate{}});
                 break;
@@ -659,9 +657,10 @@ void VirtualMachine::run(const Chunk& chunk, std::ostream& out, const VMOptions&
                 if (isInt(operand)) {
                     const int32_t value = std::get<int32_t>(operand);
                     if (value == std::numeric_limits<int32_t>::min()) {
-                        throw std::runtime_error("Integer overflow in negation.");
+                        push(Value{static_cast<int64_t>(2147483648)});
+                    } else {
+                        push(Value{static_cast<int32_t>(-value)});
                     }
-                    push(Value{static_cast<int32_t>(-value)});
                 } else if (isLongLong(operand)) {
                     const int64_t value = std::get<int64_t>(operand);
                     if (value == std::numeric_limits<int64_t>::min()) {
@@ -746,8 +745,14 @@ void VirtualMachine::run(const Chunk& chunk, std::ostream& out, const VMOptions&
                 break;
             case OpCode::Halt:
                 return;
-            default:
                 throw std::runtime_error("Unknown opcode byte " + std::to_string(static_cast<int>(instruction)) + ".");
+            }
+        } catch (const std::exception& error) {
+            std::string msg = error.what();
+            if (msg.find("on line") == std::string::npos && ip > 0 && ip <= chunk.lines.size()) {
+                throw std::runtime_error(msg + " on line " + std::to_string(chunk.lines[ip - 1]) + ".");
+            }
+            throw;
         }
     }
 
