@@ -271,10 +271,19 @@ cvmpp/
 
 ## 🙏 Acknowledgments
 
-This project was heavily inspired by the learning philosophy behind crafting interpreters from the ground up. Special thanks to:
+This project was heavily inspired by various compiler design resources, tutorials, and open-source implementations that helped shape both the architecture and learning process.
 
-- [**Crafting Interpreters** by Robert Nystrom](https://craftinginterpreters.com/) — the gold standard for learning this stuff
-- The C++ standards committee — for giving us `std::variant` and `std::optional`, which made type dispatch actually bearable
+Special thanks to:
+
+- [Crafting Interpreters by Robert Nystrom](https://craftinginterpreters.com/?utm_source=chatgpt.com) — for the excellent explanations on interpreters, parsing, and language implementation concepts.
+
+- [Compiler Design Course by Sudhakar Atchala](https://www.youtube.com/watch?v=vcSijrRsrY0&list=PLUDlas_Zy_qC7c5tCgTMYq2idyyT24lqs&utm_source=chatgpt.com) — for strong theoretical foundations in compiler construction.
+
+- [Creating a Compiler Playlist by Pixeled](https://www.youtube.com/watch?v=CcnhLKPmPEM&list=PLXj4XH7LcRfC9pGMWuM6UWE3V4YZ9TZzM&utm_source=chatgpt.com) — for practical implementation guidance and compiler-building walkthroughs.
+
+- [PeachCompiler](https://github.com/nibblebits/PeachCompiler?utm_source=chatgpt.com) — for reference ideas regarding compiler structure, parsing flow, and low-level implementation details.
+
+- The C++ standards committee — for modern language features like `std::variant` and `std::optional`, which significantly simplified AST and type-dispatch handling.
 
 
 ---
