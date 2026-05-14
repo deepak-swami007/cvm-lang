@@ -37,7 +37,7 @@
 
 ---
 
-## 🤔 What is CVM++?
+## What is CVM++?
 
 CVM++ is a **complete, end-to-end programming language implementation** — written in modern C++20. It takes source code you write, chews through it across five distinct stages, and executes it on a custom-built virtual machine.
 
@@ -55,7 +55,7 @@ This project exists because the best way to truly understand how languages work 
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 CVM++ processes source code through a **five-stage pipeline**, where each stage has a single, well-defined responsibility. No stage knows too much about the others.
 
@@ -105,7 +105,7 @@ Every stage fails fast and loudly. If your code is malformed, you'll know exactl
 
 ---
 
-## ⚡ Language Specification
+## Language Specification
 
 CVM++ is **statically typed at declaration** with support for **runtime type inference** via `auto` and `let`. The language is intentionally minimal but expressive — everything is a deliberate design choice.
 
@@ -169,7 +169,7 @@ Standard `if` / `else if` / `else` branching. Condition expressions are fully ev
 
 ---
 
-## 🛡 Safety & Error Handling
+## Safety & Error Handling
 
 CVM++ doesn't just crash. It tells you *what went wrong*, *where*, and *why*. Runtime safety is not an afterthought — it's baked into every layer of the pipeline.
 
@@ -197,7 +197,7 @@ CVM++ doesn't just crash. It tells you *what went wrong*, *where*, and *why*. Ru
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -269,7 +269,7 @@ cvmpp/
 
 
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 This project was heavily inspired by various compiler design resources, tutorials, and open-source implementations that helped shape both the architecture and learning process.
 
