@@ -140,8 +140,6 @@ These flags can be used individually or combined. By default, the VM still runs 
 
 ## Strong Demo Flow
 
-If you need to record a demo video for submission, this sequence shows the project extremely well:
-
 ```bash
 ./build/cvm --source --tokens sample.cvm
 ./build/cvm --ast --no-run sample.cvm
