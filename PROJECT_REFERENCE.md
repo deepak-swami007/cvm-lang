@@ -91,14 +91,15 @@ Use `--help` at any time:
 
 ## 3. Recommended Demo Sequence
 
-If you need to demonstrate compilation and execution for a report or video, this is the cleanest sequence:
+If you need to demonstrate compilation and execution for a report or video, use the calculator example:
 
 ```bash
-./build/cvm --source --tokens examples/example.cvm
-./build/cvm --ast --no-run examples/example.cvm
-./build/cvm --bytecode --no-run examples/example.cvm
-./build/cvm --emit-bytecode examples/example.cvb --no-run examples/example.cvm
-./build/cvm --run-bytecode examples/example.cvb
+./build/cvm --source examples/calculator.cvm --no-run
+./build/cvm --tokens examples/calculator.cvm --no-run
+./build/cvm --ast --no-run examples/calculator.cvm
+./build/cvm --bytecode --no-run examples/calculator.cvm
+./build/cvm --emit-bytecode examples/calculator.cvb --no-run examples/calculator.cvm
+./build/cvm --run-bytecode examples/calculator.cvb
 ```
 
 This demonstrates:
@@ -107,22 +108,25 @@ This demonstrates:
 2. Tokenization
 3. AST construction
 4. Bytecode generation
-5. Bytecode file emission
-6. VM execution from the saved bytecode file
+5. Bytecode saved to a `.cvb` file
+6. VM execution from the `.cvb` file (no source needed)
 
 ## 4. Architecture Overview
 
 The project follows a classic compiler + VM pipeline:
 
 ```text
-Source file
+Source file (.cvm)
   -> Lexer
   -> Token stream
   -> Parser
   -> AST
   -> Compiler
   -> Bytecode chunk
-  -> Virtual machine
+       |
+       +--> .cvb file  (--emit-bytecode)
+       |
+  -> Virtual machine  (<-- or --run-bytecode .cvb)
   -> Program output
 ```
 
@@ -134,9 +138,9 @@ Source file
 | `src/parser.cpp` | Builds the AST with recursive descent |
 | `include/cvm/ast.h` | Defines expression and statement node types |
 | `src/compiler.cpp` | Emits bytecode from the AST |
-| `include/cvm/bytecode.h` | Defines opcodes and disassembly support |
+| `include/cvm/bytecode.h` | Defines opcodes, disassembly, and `.cvb` file serialization |
 | `src/vm.cpp` | Executes bytecode and enforces runtime checks |
-| `src/main.cpp` | CLI entry point and stage-dump interface |
+| `src/main.cpp` | CLI entry point, stage-dump interface, and `.cvb` emit/run logic |
 
 ## 5. Supported Language Functionality
 

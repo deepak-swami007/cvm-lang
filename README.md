@@ -13,7 +13,7 @@
 
 ### A custom C++20 language pipeline with a handwritten lexer, parser, compiler, and virtual machine
 
-*Source code in, bytecode out, execution on a stack-based VM.*
+*Source code in, bytecode out, save to `.cvb`, execute on a stack-based VM.*
 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://en.cppreference.com/w/cpp/compiler_support/20)
 [![CMake](https://img.shields.io/badge/CMake-3.10+-064F8C?style=for-the-badge&logo=cmake&logoColor=white)](https://cmake.org/)
@@ -38,7 +38,7 @@
 
 ## What This Project Is
 
-CVM++ is a complete end-to-end programming language implementation written in modern C++20. It takes a `.cvm` source file, tokenizes it, parses it into an AST, compiles that AST into bytecode, and executes the bytecode on a custom virtual machine.
+CVM++ is a complete end-to-end programming language implementation written in modern C++20. It takes a `.cvm` source file, tokenizes it, parses it into an AST, compiles that AST into bytecode, and executes the bytecode on a custom virtual machine. Compiled bytecode can also be saved to a standalone `.cvb` file and later loaded directly by the VM — separating compilation from execution.
 
 Everything important is implemented by hand:
 
@@ -46,6 +46,7 @@ Everything important is implemented by hand:
 - Recursive-descent parser
 - AST model
 - Bytecode compiler
+- Binary bytecode serializer (`.cvb` format)
 - Stack-based VM
 - Runtime checks and error reporting
 
@@ -58,8 +59,9 @@ This repository is ideal for demonstrating how compilers and virtual machines ac
 - Typed variable declarations with `let` / `auto` inference support
 - Control flow support for `if`, `else`, `while`, `for`, `break`, and `continue`
 - Bytecode disassembly support for showing the compiled program
+- `.cvb` bytecode file format — compile once, run anywhere with the VM
 - Safe runtime behavior with checks for overflow, bad input, division by zero, and invalid operations
-- New stage-dump CLI flags for demoing tokens, AST, and bytecode directly from the terminal
+- Stage-dump CLI flags for demoing tokens, AST, and bytecode directly from the terminal
 
 ## Execution Pipeline
 
@@ -67,16 +69,20 @@ This repository is ideal for demonstrating how compilers and virtual machines ac
 .cvm source
    |
    v
-[Lexer] ----> token stream
+[Lexer] --------> token stream
    |
    v
-[Parser] ---> abstract syntax tree
+[Parser] -------> abstract syntax tree
    |
    v
-[Compiler] -> bytecode chunk
+[Compiler] -----> bytecode chunk
+   |          \
+   |           --> .cvb file (--emit-bytecode)
+   v                |
+[VM] <--------------+  (--run-bytecode)
    |
    v
-[VM] -------> program output
+program output
 ```
 
 ## Language Snapshot
@@ -92,6 +98,7 @@ This repository is ideal for demonstrating how compilers and virtual machines ac
 | Assignment | `=`, `+=`, `-=`, `*=`, `/=` |
 | Statements | Variable declarations, expression statements, `print`, `input`, blocks |
 | Control flow | `if`, `else`, `while`, `for`, `break`, `continue` |
+| Bytecode files | Compile to `.cvb`, load and run `.cvb` directly on the VM |
 | Debug views | Source, token stream, AST, bytecode disassembly |
 
 ## Build
@@ -120,6 +127,12 @@ This project executes `.cvm` source files. For reliable use, pass the script pat
 
 ```bash
 ./build/cvm path/to/program.cvm
+```
+
+Run the included calculator example:
+
+```bash
+./build/cvm examples/calculator.cvm
 ```
 
 Limit execution steps to guard against infinite loops:
@@ -163,12 +176,26 @@ These flags can be used individually or combined. By default, the VM still runs 
 
 ## Strong Demo Flow
 
+Using the calculator example for a complete demo:
+
 ```bash
-./build/cvm --source --tokens examples/example.cvm
-./build/cvm --ast --no-run examples/example.cvm
-./build/cvm --bytecode --no-run examples/example.cvm
-./build/cvm --emit-bytecode examples/example.cvb --no-run examples/example.cvm
-./build/cvm --run-bytecode examples/example.cvb
+# 1. Show the source program
+./build/cvm --source examples/calculator.cvm --no-run
+
+# 2. Show lexical analysis (token stream)
+./build/cvm --tokens examples/calculator.cvm --no-run
+
+# 3. Show the parsed AST
+./build/cvm --ast --no-run examples/calculator.cvm
+
+# 4. Show the compiled bytecode disassembly
+./build/cvm --bytecode --no-run examples/calculator.cvm
+
+# 5. Compile to a standalone .cvb bytecode file
+./build/cvm --emit-bytecode examples/calculator.cvb --no-run examples/calculator.cvm
+
+# 6. Run the .cvb file directly on the VM (no source needed)
+./build/cvm --run-bytecode examples/calculator.cvb
 ```
 
 That gives you a clean story:
@@ -177,16 +204,19 @@ That gives you a clean story:
 2. Show lexical analysis.
 3. Show the AST.
 4. Show the compiled bytecode.
-5. Save the bytecode to a file.
-6. Run that bytecode file on the VM.
+5. Save the bytecode to a `.cvb` file.
+6. Run that `.cvb` file on the VM — proving the bytecode is self-contained.
 
 ## Repository Layout
 
 ```text
 CVM++/
+├── examples/
+│   ├── calculator.cvm        # sample calculator program
+│   └── calculator.cvb        # compiled bytecode (generated)
 ├── include/cvm/
 │   ├── ast.h
-│   ├── bytecode.h
+│   ├── bytecode.h            # opcodes, disassembler, .cvb serializer
 │   ├── compiler.h
 │   ├── lexer.h
 │   ├── parser.h

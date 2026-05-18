@@ -1,0 +1,29 @@
+// CVM++ Interactive Calculator
+// Input two numbers and an operator, get the result
+
+int a;
+int b;
+char op;
+
+input a;
+input op;
+input b;
+
+if (op == '+') {
+    print a + b;
+}
+if (op == '-') {
+    print a - b;
+}
+if (op == '*') {
+    print a * b;
+}
+if (op == '/') {
+    print a / b;
+}
+if (op == '%') {
+    print a % b;
+}
+if (op == '^') {
+    print a ^ b;
+}

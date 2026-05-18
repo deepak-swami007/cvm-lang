@@ -2,19 +2,26 @@ Build:
 cmake -S . -B build
 cmake --build build
 
-Run a source program directly:
-./build/cvm examples/example.cvm
-
-Show compiler stages:
-./build/cvm --source --tokens examples/example.cvm
-./build/cvm --ast --no-run examples/example.cvm
-./build/cvm --bytecode --no-run examples/example.cvm
-
-Compile source code to a standalone bytecode file:
-./build/cvm --emit-bytecode examples/example.cvb --no-run examples/example.cvm
-
-Run the saved bytecode file on the virtual machine:
-./build/cvm --run-bytecode examples/example.cvb
-
-Calculator example:
+Run the calculator example directly:
 ./build/cvm examples/calculator.cvm
+
+Show compiler stages (source, tokens, AST, bytecode):
+./build/cvm --source examples/calculator.cvm --no-run
+./build/cvm --tokens examples/calculator.cvm --no-run
+./build/cvm --ast --no-run examples/calculator.cvm
+./build/cvm --bytecode --no-run examples/calculator.cvm
+
+Compile source to a standalone .cvb bytecode file:
+./build/cvm --emit-bytecode examples/calculator.cvb --no-run examples/calculator.cvm
+
+Run the saved .cvb bytecode file on the virtual machine:
+./build/cvm --run-bytecode examples/calculator.cvb
+
+Show all stages at once:
+./build/cvm --all-stages --no-run examples/calculator.cvm
+
+Limit VM execution steps (prevents infinite loops):
+./build/cvm --max-steps 10000 examples/calculator.cvm
+
+Show help:
+./build/cvm --help
