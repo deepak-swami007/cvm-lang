@@ -11,8 +11,6 @@
 ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝     ╚═══╝  ╚═╝     ╚═╝
 ```
 
-<div align="center">
-
 ### A custom C++20 language pipeline with a handwritten lexer, parser, compiler, and virtual machine
 
 *Source code in, bytecode out, execution on a stack-based VM.*
