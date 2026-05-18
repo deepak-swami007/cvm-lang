@@ -13,6 +13,21 @@
 
 </div>
 
+## Jump To
+
+[What This Project Is](#what-this-project-is) •
+[Why It Stands Out](#why-it-stands-out) •
+[Execution Pipeline](#execution-pipeline) •
+[Language Snapshot](#language-snapshot) •
+[Build](#build) •
+[Run](#run) •
+[Inspect Compiler Stages](#inspect-compiler-stages) •
+[Strong Demo Flow](#strong-demo-flow) •
+[Repository Layout](#repository-layout) •
+[Documentation](#documentation) •
+[Notes On Accuracy](#notes-on-accuracy) •
+[Acknowledgments](#acknowledgments)
+
 ## What This Project Is
 
 CVM++ is a complete end-to-end programming language implementation written in modern C++20. It takes a `.cvm` source file, tokenizes it, parses it into an AST, compiles that AST into bytecode, and executes the bytecode on a custom virtual machine.

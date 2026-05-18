@@ -1,15 +1,19 @@
 # CVM++ Project Reference
 
-## Purpose Of This File
+## Jump To
 
-This document is the detailed companion to `README.md`. It is meant to be submission-friendly and presentation-friendly, and it covers:
-
-- How to build and run the project
-- What each command-line option does
-- What functionality the language currently supports
-- The grammar accepted by the parser
-- How to print lexer, parser, and bytecode stages
-- What limitations still exist in the current implementation
+[Build Instructions](#1-build-instructions) •
+[CLI Command Reference](#2-cli-command-reference) •
+[Recommended Demo Sequence](#3-recommended-demo-sequence) •
+[Architecture Overview](#4-architecture-overview) •
+[Supported Language Functionality](#5-supported-language-functionality) •
+[Operator Precedence](#6-operator-precedence) •
+[Grammar](#7-grammar) •
+[What The Stage Dumps Show](#8-what-the-stage-dumps-show) •
+[Safety And Error Handling](#9-safety-and-error-handling) •
+[Current Limitations](#10-current-limitations) •
+[Suggested Submission Checklist](#11-suggested-submission-checklist) •
+[Short Viva Summary](#12-short-viva-summary)
 
 ## 1. Build Instructions
 
