@@ -25,7 +25,6 @@
 [Strong Demo Flow](#strong-demo-flow) •
 [Repository Layout](#repository-layout) •
 [Documentation](#documentation) •
-[Notes On Accuracy](#notes-on-accuracy) •
 [Acknowledgments](#acknowledgments)
 
 ## What This Project Is
@@ -190,18 +189,12 @@ For full submission-ready documentation, see:
 
 - [PROJECT_REFERENCE.md](./PROJECT_REFERENCE.md) for build steps, usage instructions, stage commands, supported functionality, grammar, and current limitations
 
-## Notes On Accuracy
-
-This README is intentionally aligned to the code that exists in the repository today. It does not assume features that are not implemented. In particular:
-
-- The project is a file-based compiler/VM runner, not an interactive REPL
-- The current language does not yet implement user-defined functions
-- The current runtime is centered around globals and a single bytecode chunk
-
 ## Acknowledgments
 
-- [Crafting Interpreters](https://craftinginterpreters.com/) for the learning philosophy behind building language tools from scratch
-- Modern C++20 for `std::variant`, `std::optional`, and the rest of the toolkit that made a clean implementation possible
+- [Crafting Interpreters](https://craftinginterpreters.com/) for outstanding explanations of interpreters, parsing, and language implementation concepts
+- [PeachCompiler by nibblebits](https://github.com/nibblebits/PeachCompiler) for reference ideas around compiler structure, parsing flow, and low-level implementation details
+- [Compiler Design Course Playlist by Sudhakar Atchala](https://www.youtube.com/watch?v=CcnhLKPmPEM&list=PLXj4XH7LcRfC9pGMWuM6UWE3V4YZ9TZzM) for strong theoretical foundations in compiler construction
+- [Creating a Compiler Playlist by Pixeled](https://www.youtube.com/watch?v=vcSijrRsrY0&list=PLUDlas_Zy_qC7c5tCgTMYq2idyyT24lqs) for practical compiler-building walkthroughs and implementation guidance
 
 <div align="center">
 
