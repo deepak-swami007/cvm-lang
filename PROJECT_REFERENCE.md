@@ -10,10 +10,7 @@
 [Operator Precedence](#6-operator-precedence) •
 [Grammar](#7-grammar) •
 [What The Stage Dumps Show](#8-what-the-stage-dumps-show) •
-[Safety And Error Handling](#9-safety-and-error-handling) •
-[Current Limitations](#10-current-limitations) •
-[Suggested Submission Checklist](#11-suggested-submission-checklist) •
-[Short Viva Summary](#12-short-viva-summary)
+[Error Reference](#9-error-reference)
 
 ## 1. Build Instructions
 
@@ -435,46 +432,86 @@ Prints:
 
 If you want everything except execution, add `--no-run`.
 
-## 9. Safety And Error Handling
+## 9. Error Reference
 
-The project already includes useful runtime and compile-time checks, including:
+The executable classifies user-facing failures into labels such as `LexerError`, `SyntaxError`, `DeclarationError`, `NameError`, `TypeError`, `MathError`, `InputError`, `OverflowError`, `StackError`, and `RuntimeError`.
 
-- Unexpected character detection in the lexer
-- Malformed literal detection
-- Parse errors with line information
-- Undefined variable errors
-- Division by zero protection
-- Modulo by zero protection
-- Integer overflow checks in critical numeric operations
-- Floating-point overflow checks
-- Stack underflow protection in the VM
-- Input validation against declared variable types
-- Instruction limit enforcement via `--max-steps`
+### 9.1 Driver And Startup Errors
 
-## 10. Current Limitations
+These are reported before lexing/parsing begins.
 
-To keep the documentation honest, these are important current boundaries of the implementation:
+| Error family | When it happens | Typical trigger |
+|---|---|---|
+| `RuntimeError` | Input file cannot be opened | Wrong path or missing file |
+| `RuntimeError` | No usable input file is provided | No `.cvm` file passed and no fallback example exists |
+| `RuntimeError` | Unknown CLI option is used | Invalid flag such as an unsupported `--something` |
+| `RuntimeError` | `--max-steps` is missing its value | `--max-steps` with no number after it |
+| `RuntimeError` | `--max-steps` is invalid | Non-numeric value such as text |
+| `RuntimeError` | `--max-steps` is too large | Value outside the supported range |
+| `RuntimeError` | More than one input file is provided | Multiple positional file arguments |
 
-- No user-defined functions yet
-- No arrays, strings, classes, or heap-allocated objects
-- No interactive REPL mode
-- Variables are effectively compiled as globals, even when declared inside nested blocks
-- Conditions expect `bool` values rather than general truthiness
-- Compound assignment currently supports `+=`, `-=`, `*=`, and `/=` only
-- Numeric literals are plain integer/decimal forms; scientific notation is not part of the current lexer
+### 9.2 Compilation-Time Errors
 
-## 11. Suggested Submission Checklist
+Compilation-time here includes lexing, parsing, semantic validation, and bytecode generation.
 
-For a clean submission, you can include:
+| Phase | Error family | When it happens | Typical message pattern |
+|---|---|---|---|
+| Lexer | `LexerError` | Illegal character appears in source | `Unexpected character 'x'` |
+| Lexer | `LexerError` | Character literal is not closed | `Unterminated char literal` |
+| Lexer | `LexerError` | Empty character literal is used | `Empty char literal` |
+| Lexer | `LexerError` | Character literal contains too many characters | `Char literal must contain exactly one character` |
+| Lexer | `LexerError` | Invalid escape sequence is used in a char literal | `Invalid escape sequence` |
+| Lexer | `LexerError` | Invalid hex escape is used | `Invalid hex escape sequence` |
+| Lexer | `LexerError` | Numeric token is malformed | `Invalid numeric literal` |
+| Lexer | `OverflowError` | Numeric literal exceeds supported range | `Numeric literal '...' is out of range` |
+| Parser | `SyntaxError` | Required token is missing | `Expected ';'`, `Expected ')'`, `Expected '}'`, `Expected variable name` |
+| Parser | `SyntaxError` | Expression is malformed | `Expected a literal, identifier, or parenthesized expression` |
+| Parser | `SyntaxError` | Assignment target is not assignable | `Invalid assignment target` |
+| Compiler | `DeclarationError` | Same variable is declared more than once | `Variable 'x' is already declared` |
+| Compiler | `NameError` | Variable is used before being declared | `Undefined variable 'x'` |
+| Compiler | `SyntaxError` | `break` is used outside a loop | `Cannot use 'break' outside of a loop` |
+| Compiler | `SyntaxError` | `continue` is used outside a loop | `Cannot use 'continue' outside of a loop` |
+| Compiler | `RuntimeError` | Constant pool limit is exceeded during code generation | `Too many constants in one chunk` |
+| Compiler | `RuntimeError` | Global name table limit is exceeded during code generation | `Too many global names in one chunk` |
+| Compiler | `RuntimeError` | Jump patching exceeds bytecode limits | `Too much code to jump over` |
+| Compiler | `RuntimeError` | Loop body exceeds jump encoding limits | `Loop body is too large` |
+| Compiler | `RuntimeError` | Internal opcode emission reaches an impossible state | `Unsupported unary operator`, `Unsupported binary operator`, `Internal compiler error while patching jump` |
 
-- Source code
-- `README.md`
-- `PROJECT_REFERENCE.md`
-- A short report on architecture and design
-- A demo video showing source, tokens, AST, bytecode, and final VM execution
+### 9.3 Runtime Errors
 
-## 12. Short Viva Summary
+These occur after bytecode generation, while the VM is executing.
 
-If someone asks what the project does in one paragraph:
+| Error family | When it happens | Typical message pattern |
+|---|---|---|
+| `NameError` | Variable is missing at runtime | `Undefined variable 'x'` |
+| `DeclarationError` | VM attempts to define an already-defined global | `Variable 'x' is already defined` |
+| `TypeError` | Arithmetic operator receives non-numeric operands | `Expected number for ...` |
+| `TypeError` | Bitwise operator receives non-integral operands | `Expected int for ...` |
+| `TypeError` | Condition is not boolean | `Expected bool for if/while condition` |
+| `TypeError` | Assignment violates the declared variable type | `Cannot assign ... to int/double/bool/char/...` |
+| `TypeError` | Numeric conversion helper receives a non-numeric value | `Expected numeric value, got ...` |
+| `MathError` | Division by zero occurs | `Division by zero` |
+| `MathError` | Modulo by zero occurs | `Modulo by zero` |
+| `OverflowError` | Integer math overflows | `Integer overflow in addition/subtraction/multiplication/division/negation` |
+| `OverflowError` | Float or double result becomes non-finite | `Floating-point overflow in ...` |
+| `OverflowError` | Type conversion overflows | `Float value is out of int range`, `Double value is out of int range` |
+| `InputError` | `input` cannot read a value | `Invalid input: could not read a value for variable ...` |
+| `InputError` | User input does not match declared type | `Invalid integer input`, `Invalid numeric input`, `Invalid bool input`, `Invalid char input` |
+| `InputError` | `auto` input cannot be inferred from the entered text | `Invalid input for auto input` |
+| `StackError` | VM tries to pop from an empty stack | `VM stack underflow` |
+| `StackError` | VM checks a loop/if condition with no stack value available | `VM stack underflow while reading if/while condition` |
+| `RuntimeError` | Execution exceeds the configured instruction cap | `Execution step limit exceeded` |
+| `RuntimeError` | Bytecode jump target is invalid | `Jump target is out of bounds`, `Conditional jump target is out of bounds`, `Loop target is out of bounds` |
+| `RuntimeError` | Bytecode stream is malformed or truncated | `Unexpected end of bytecode while reading ...` |
+| `RuntimeError` | Bytecode metadata index is invalid | `Invalid constant index`, `Invalid global name index`, `Invalid global type index` |
+| `RuntimeError` | VM sees an unknown opcode | `Unknown opcode byte ...` |
+| `RuntimeError` | Bytecode finishes without a halt instruction | `VM reached the end of bytecode without OP_HALT` |
+| `RuntimeError` | Assignment opcode executes with no value on the stack | `Cannot assign to 'x' because the VM stack is empty` |
 
-> CVM++ is a handwritten compiler and virtual machine built in C++20. It reads a small statically-typed language, converts source code into tokens, parses those tokens into an AST, compiles the AST into bytecode, and executes the bytecode on a custom stack-based VM. The project also includes typed input handling, arithmetic and control-flow support, runtime safety checks, and command-line options to print each internal compilation stage for demonstration and debugging.
+### 9.4 Error Reporting Style
+
+The executable also improves error readability in a few ways:
+
+- Parse and runtime errors try to preserve source line numbers
+- The front-end prints labels such as `SyntaxError`, `TypeError`, and `MathError`
+- When a line number is available, the CLI prints the source line and a caret marker
