@@ -17,6 +17,25 @@
 
 namespace {
 
+struct DebugOptions {
+    bool showSource = false;
+    bool showTokens = false;
+    bool showAst = false;
+    bool showBytecode = false;
+    bool noRun = false;
+
+    void enableAllStages() {
+        showSource = true;
+        showTokens = true;
+        showAst = true;
+        showBytecode = true;
+    }
+
+    bool hasStageOutput() const {
+        return showSource || showTokens || showAst || showBytecode;
+    }
+};
+
 std::string readFile(const std::string& path) {
     std::ifstream input(path);
     if (!input) {
@@ -30,9 +49,25 @@ std::string readFile(const std::string& path) {
 
 std::string usageText(std::string_view programName) {
     std::ostringstream out;
-    out << "Usage: " << programName << " [--max-steps N] [path-to-script.cvm]\n"
-        << "  --max-steps N   Stop after N VM instructions (0 disables the limit).\n";
+    out << "Usage: " << programName << " [options] [path-to-script.cvm]\n"
+        << "Options:\n"
+        << "  --source        Print the source file before compilation.\n"
+        << "  --tokens        Print the lexer token stream.\n"
+        << "  --ast           Print the parsed abstract syntax tree.\n"
+        << "  --bytecode      Print the compiled bytecode disassembly.\n"
+        << "  --all-stages    Print source, tokens, AST, and bytecode.\n"
+        << "  --no-run        Stop after compilation/debug output without executing the VM.\n"
+        << "  --max-steps N   Stop after N VM instructions (0 disables the limit).\n"
+        << "  --help, -h      Show this help message.\n";
     return out.str();
+}
+
+void printSectionHeader(std::ostream& out, std::string_view title, bool& printedAnySection) {
+    if (printedAnySection) {
+        out << '\n';
+    }
+    out << "=== " << title << " ===\n";
+    printedAnySection = true;
 }
 
 std::size_t parseMaxSteps(const std::string& text) {
@@ -146,10 +181,23 @@ int main(int argc, char** argv) {
         std::cout << std::unitbuf;
 
         cvm::VMOptions vmOptions;
+        DebugOptions debugOptions;
         for (int index = 1; index < argc; ++index) {
             const std::string argument = argv[index];
 
-            if (argument == "--max-steps") {
+            if (argument == "--source") {
+                debugOptions.showSource = true;
+            } else if (argument == "--tokens") {
+                debugOptions.showTokens = true;
+            } else if (argument == "--ast") {
+                debugOptions.showAst = true;
+            } else if (argument == "--bytecode") {
+                debugOptions.showBytecode = true;
+            } else if (argument == "--all-stages") {
+                debugOptions.enableAllStages();
+            } else if (argument == "--no-run") {
+                debugOptions.noRun = true;
+            } else if (argument == "--max-steps") {
                 if (index + 1 >= argc) {
                     throw std::runtime_error("Missing value after --max-steps.");
                 }
@@ -173,37 +221,46 @@ int main(int argc, char** argv) {
         }
 
         source = readFile(sourcePath);
-
-        // === File ===
-        // std::cout << "=== File ===\n" << sourcePath << "\n\n";
-
-        // === Source ===
-        // std::cout << "=== Source ===\n" << source << "\n\n";
+        bool printedAnySection = false;
+        if (debugOptions.showSource) {
+            printSectionHeader(std::cout, "Source", printedAnySection);
+            std::cout << "File: " << sourcePath << '\n'
+                      << source;
+            if (source.empty() || source.back() != '\n') {
+                std::cout << '\n';
+            }
+        }
 
         cvm::Lexer lexer(source);
         std::vector<cvm::Token> tokens = lexer.scanTokens();
-
-        // === Tokens ===
-        // std::cout << "=== Tokens ===\n";
-        // for (const auto& token : tokens) {
-        //     std::cout << cvm::formatToken(token) << '\n';
-        // }
-        // std::cout << '\n';
+        if (debugOptions.showTokens) {
+            printSectionHeader(std::cout, "Tokens", printedAnySection);
+            for (const auto& token : tokens) {
+                std::cout << cvm::formatToken(token) << '\n';
+            }
+        }
 
         cvm::Parser parser(tokens);
         std::vector<cvm::StmtPtr> program = parser.parse();
-
-        // === AST ===
-        // std::cout << "=== AST ===\n" << cvm::toString(program) << "\n\n";
+        if (debugOptions.showAst) {
+            printSectionHeader(std::cout, "AST", printedAnySection);
+            std::cout << cvm::toString(program) << '\n';
+        }
 
         cvm::Compiler compiler;
         cvm::Chunk chunk = compiler.compile(program);
+        if (debugOptions.showBytecode) {
+            printSectionHeader(std::cout, "Bytecode", printedAnySection);
+            std::cout << cvm::disassemble(chunk) << '\n';
+        }
 
-        // === Bytecode ===
-        // std::cout << "=== Bytecode ===\n" << cvm::disassemble(chunk) << "\n\n";
-
-        cvm::VirtualMachine vm;
-        vm.run(chunk, std::cout, vmOptions);
+        if (!debugOptions.noRun) {
+            if (debugOptions.hasStageOutput()) {
+                printSectionHeader(std::cout, "Program Output", printedAnySection);
+            }
+            cvm::VirtualMachine vm;
+            vm.run(chunk, std::cout, vmOptions);
+        }
     } catch (const std::exception& error) {
         std::string msg = error.what();
 
