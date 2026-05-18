@@ -1,0 +1,20 @@
+Build:
+cmake -S . -B build
+cmake --build build
+
+Run a source program directly:
+./build/cvm examples/example.cvm
+
+Show compiler stages:
+./build/cvm --source --tokens examples/example.cvm
+./build/cvm --ast --no-run examples/example.cvm
+./build/cvm --bytecode --no-run examples/example.cvm
+
+Compile source code to a standalone bytecode file:
+./build/cvm --emit-bytecode examples/example.cvb --no-run examples/example.cvm
+
+Run the saved bytecode file on the virtual machine:
+./build/cvm --run-bytecode examples/example.cvb
+
+Calculator example:
+./build/cvm examples/calculator.cvm

@@ -55,6 +55,10 @@ std::string usageText(std::string_view programName) {
         << "  --tokens        Print the lexer token stream.\n"
         << "  --ast           Print the parsed abstract syntax tree.\n"
         << "  --bytecode      Print the compiled bytecode disassembly.\n"
+        << "  --emit-bytecode PATH\n"
+        << "                  Compile source and save bytecode to PATH.\n"
+        << "  --run-bytecode PATH\n"
+        << "                  Load bytecode from PATH and run it on the VM.\n"
         << "  --all-stages    Print source, tokens, AST, and bytecode.\n"
         << "  --no-run        Stop after compilation/debug output without executing the VM.\n"
         << "  --max-steps N   Stop after N VM instructions (0 disables the limit).\n"
@@ -168,6 +172,8 @@ void printSourceContext(std::ostream& err,
 int main(int argc, char** argv) {
     std::string sourcePath;
     std::string source;
+    std::string emitBytecodePath;
+    std::string runBytecodePath;
 
     if (argc > 1) {
         const std::string_view firstArg = argv[1];
@@ -193,6 +199,16 @@ int main(int argc, char** argv) {
                 debugOptions.showAst = true;
             } else if (argument == "--bytecode") {
                 debugOptions.showBytecode = true;
+            } else if (argument == "--emit-bytecode") {
+                if (index + 1 >= argc) {
+                    throw std::runtime_error("Missing value after --emit-bytecode.");
+                }
+                emitBytecodePath = argv[++index];
+            } else if (argument == "--run-bytecode") {
+                if (index + 1 >= argc) {
+                    throw std::runtime_error("Missing value after --run-bytecode.");
+                }
+                runBytecodePath = argv[++index];
             } else if (argument == "--all-stages") {
                 debugOptions.enableAllStages();
             } else if (argument == "--no-run") {
@@ -211,55 +227,90 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (sourcePath.empty() && std::filesystem::exists("examples/example.cvm")) {
-            sourcePath = "examples/example.cvm";
-        } else if (sourcePath.empty() && std::filesystem::exists("examples/first.cvm")) {
-            sourcePath = "examples/first.cvm";
-        } else if (sourcePath.empty()) {
-            throw std::runtime_error(
-                "No input file provided and no default script was found.\n" + usageText(argv[0]));
-        }
-
-        source = readFile(sourcePath);
         bool printedAnySection = false;
-        if (debugOptions.showSource) {
-            printSectionHeader(std::cout, "Source", printedAnySection);
-            std::cout << "File: " << sourcePath << '\n'
-                      << source;
-            if (source.empty() || source.back() != '\n') {
-                std::cout << '\n';
+
+        if (!emitBytecodePath.empty() && !runBytecodePath.empty()) {
+            throw std::runtime_error("Choose either --emit-bytecode or --run-bytecode, not both.");
+        }
+
+        if (!runBytecodePath.empty()) {
+            if (!sourcePath.empty()) {
+                throw std::runtime_error("Do not pass a source file when using --run-bytecode.");
             }
-        }
-
-        cvm::Lexer lexer(source);
-        std::vector<cvm::Token> tokens = lexer.scanTokens();
-        if (debugOptions.showTokens) {
-            printSectionHeader(std::cout, "Tokens", printedAnySection);
-            for (const auto& token : tokens) {
-                std::cout << cvm::formatToken(token) << '\n';
+            if (debugOptions.showSource || debugOptions.showTokens || debugOptions.showAst) {
+                throw std::runtime_error(
+                    "--source, --tokens, and --ast are only available when compiling a source file.");
             }
-        }
 
-        cvm::Parser parser(tokens);
-        std::vector<cvm::StmtPtr> program = parser.parse();
-        if (debugOptions.showAst) {
-            printSectionHeader(std::cout, "AST", printedAnySection);
-            std::cout << cvm::toString(program) << '\n';
-        }
-
-        cvm::Compiler compiler;
-        cvm::Chunk chunk = compiler.compile(program);
-        if (debugOptions.showBytecode) {
-            printSectionHeader(std::cout, "Bytecode", printedAnySection);
-            std::cout << cvm::disassemble(chunk) << '\n';
-        }
-
-        if (!debugOptions.noRun) {
-            if (debugOptions.hasStageOutput()) {
-                printSectionHeader(std::cout, "Program Output", printedAnySection);
+            cvm::Chunk chunk = cvm::readChunkFile(runBytecodePath);
+            if (debugOptions.showBytecode) {
+                printSectionHeader(std::cout, "Bytecode", printedAnySection);
+                std::cout << "File: " << runBytecodePath << '\n'
+                          << cvm::disassemble(chunk) << '\n';
             }
-            cvm::VirtualMachine vm;
-            vm.run(chunk, std::cout, vmOptions);
+
+            if (!debugOptions.noRun) {
+                if (debugOptions.hasStageOutput()) {
+                    printSectionHeader(std::cout, "Program Output", printedAnySection);
+                }
+                cvm::VirtualMachine vm;
+                vm.run(chunk, std::cout, vmOptions);
+            }
+        } else {
+            if (sourcePath.empty() && std::filesystem::exists("examples/example.cvm")) {
+                sourcePath = "examples/example.cvm";
+            } else if (sourcePath.empty() && std::filesystem::exists("examples/first.cvm")) {
+                sourcePath = "examples/first.cvm";
+            } else if (sourcePath.empty()) {
+                throw std::runtime_error(
+                    "No input file provided and no default script was found.\n" + usageText(argv[0]));
+            }
+
+            source = readFile(sourcePath);
+            if (debugOptions.showSource) {
+                printSectionHeader(std::cout, "Source", printedAnySection);
+                std::cout << "File: " << sourcePath << '\n'
+                          << source;
+                if (source.empty() || source.back() != '\n') {
+                    std::cout << '\n';
+                }
+            }
+
+            cvm::Lexer lexer(source);
+            std::vector<cvm::Token> tokens = lexer.scanTokens();
+            if (debugOptions.showTokens) {
+                printSectionHeader(std::cout, "Tokens", printedAnySection);
+                for (const auto& token : tokens) {
+                    std::cout << cvm::formatToken(token) << '\n';
+                }
+            }
+
+            cvm::Parser parser(tokens);
+            std::vector<cvm::StmtPtr> program = parser.parse();
+            if (debugOptions.showAst) {
+                printSectionHeader(std::cout, "AST", printedAnySection);
+                std::cout << cvm::toString(program) << '\n';
+            }
+
+            cvm::Compiler compiler;
+            cvm::Chunk chunk = compiler.compile(program);
+            if (!emitBytecodePath.empty()) {
+                cvm::writeChunkFile(chunk, emitBytecodePath);
+                printSectionHeader(std::cout, "Bytecode File", printedAnySection);
+                std::cout << "Wrote: " << emitBytecodePath << '\n';
+            }
+            if (debugOptions.showBytecode) {
+                printSectionHeader(std::cout, "Bytecode", printedAnySection);
+                std::cout << cvm::disassemble(chunk) << '\n';
+            }
+
+            if (!debugOptions.noRun) {
+                if (debugOptions.hasStageOutput() || !emitBytecodePath.empty()) {
+                    printSectionHeader(std::cout, "Program Output", printedAnySection);
+                }
+                cvm::VirtualMachine vm;
+                vm.run(chunk, std::cout, vmOptions);
+            }
         }
     } catch (const std::exception& error) {
         std::string msg = error.what();

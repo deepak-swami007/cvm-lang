@@ -134,6 +134,18 @@ Show CLI help:
 ./build/cvm --help
 ```
 
+Compile a source file into a standalone bytecode file:
+
+```bash
+./build/cvm --emit-bytecode program.cvb --no-run path/to/program.cvm
+```
+
+Run a previously compiled bytecode file directly on the VM:
+
+```bash
+./build/cvm --run-bytecode program.cvb
+```
+
 ## Inspect Compiler Stages
 
 These flags can be used individually or combined. By default, the VM still runs after printing the requested stage output. Add `--no-run` if you only want inspection output.
@@ -144,16 +156,19 @@ These flags can be used individually or combined. By default, the VM still runs 
 | `./build/cvm --tokens program.cvm` | Lexer token stream |
 | `./build/cvm --ast program.cvm` | Parsed AST |
 | `./build/cvm --bytecode program.cvm` | Bytecode disassembly |
+| `./build/cvm --emit-bytecode program.cvb --no-run program.cvm` | Saves compiled bytecode to a file |
+| `./build/cvm --run-bytecode program.cvb` | Loads bytecode from a file and runs it on the VM |
 | `./build/cvm --all-stages program.cvm` | Source, tokens, AST, and bytecode |
 | `./build/cvm --all-stages --no-run program.cvm` | Full compiler pipeline without executing the VM |
 
 ## Strong Demo Flow
 
 ```bash
-./build/cvm --source --tokens sample.cvm
-./build/cvm --ast --no-run sample.cvm
-./build/cvm --bytecode --no-run sample.cvm
-./build/cvm sample.cvm
+./build/cvm --source --tokens examples/example.cvm
+./build/cvm --ast --no-run examples/example.cvm
+./build/cvm --bytecode --no-run examples/example.cvm
+./build/cvm --emit-bytecode examples/example.cvb --no-run examples/example.cvm
+./build/cvm --run-bytecode examples/example.cvb
 ```
 
 That gives you a clean story:
@@ -162,7 +177,8 @@ That gives you a clean story:
 2. Show lexical analysis.
 3. Show the AST.
 4. Show the compiled bytecode.
-5. Run the program on the VM.
+5. Save the bytecode to a file.
+6. Run that bytecode file on the VM.
 
 ## Repository Layout
 

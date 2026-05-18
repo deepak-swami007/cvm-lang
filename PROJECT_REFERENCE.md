@@ -27,6 +27,18 @@ Run the executable:
 ./build/cvm path/to/program.cvm
 ```
 
+Compile source to a bytecode file:
+
+```bash
+./build/cvm --emit-bytecode program.cvb --no-run path/to/program.cvm
+```
+
+Run a bytecode file on the VM:
+
+```bash
+./build/cvm --run-bytecode program.cvb
+```
+
 Optional sanitizer-enabled build:
 
 ```bash
@@ -47,6 +59,8 @@ Use `--help` at any time:
 ```bash
 ./build/cvm program.cvm
 ./build/cvm --max-steps 10000 program.cvm
+./build/cvm --emit-bytecode program.cvb --no-run program.cvm
+./build/cvm --run-bytecode program.cvb
 ```
 
 ### Stage inspection commands
@@ -68,6 +82,8 @@ Use `--help` at any time:
 | `--tokens` | Prints the lexer token stream |
 | `--ast` | Prints the parser output as an AST string |
 | `--bytecode` | Prints the compiled bytecode disassembly |
+| `--emit-bytecode PATH` | Compiles source code and writes a standalone bytecode file |
+| `--run-bytecode PATH` | Loads a standalone bytecode file and runs it on the VM |
 | `--all-stages` | Enables `--source`, `--tokens`, `--ast`, and `--bytecode` together |
 | `--no-run` | Stops after compilation/debug output without running the VM |
 | `--max-steps N` | Caps VM instruction count; `0` disables the limit |
@@ -78,10 +94,11 @@ Use `--help` at any time:
 If you need to demonstrate compilation and execution for a report or video, this is the cleanest sequence:
 
 ```bash
-./build/cvm --source --tokens sample.cvm
-./build/cvm --ast --no-run sample.cvm
-./build/cvm --bytecode --no-run sample.cvm
-./build/cvm sample.cvm
+./build/cvm --source --tokens examples/example.cvm
+./build/cvm --ast --no-run examples/example.cvm
+./build/cvm --bytecode --no-run examples/example.cvm
+./build/cvm --emit-bytecode examples/example.cvb --no-run examples/example.cvm
+./build/cvm --run-bytecode examples/example.cvb
 ```
 
 This demonstrates:
@@ -90,7 +107,8 @@ This demonstrates:
 2. Tokenization
 3. AST construction
 4. Bytecode generation
-5. VM execution
+5. Bytecode file emission
+6. VM execution from the saved bytecode file
 
 ## 4. Architecture Overview
 
